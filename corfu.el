@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -55,6 +55,11 @@
   "Enable cycling for `corfu-next' and `corfu-previous'."
   :type 'boolean)
 
+;; XXX Maybe there should be a `completion-in-region-styles' variable in Emacs
+(defcustom corfu-completion-styles nil
+  "Completion styles to use for completion in region, defaults to `completion-styles'."
+  :type '(choice (const nil) (repeat symbol)))
+
 (defgroup corfu-faces nil
   "Faces used by Corfu."
   :group 'corfu
@@ -82,15 +87,17 @@
     (((class color) (min-colors 88) (background light))
      :foreground "#bbb" :background "#444")
     (t :foreground "gray" :background "black"))
-  "Face used for the scrollbar.")
+  "The foreground color is used for the scrollbar indicator.
+If `line-spacing/=nil' or in text-mode, the background color is used instead.")
 
 (defface corfu-border
   '((((class color) (min-colors 88) (background dark))
      :foreground "#444" :background "#444" )
     (((class color) (min-colors 88) (background light))
-     :foreground "#bbb" :background "#bbb")
-    (t :foreground "gray"))
-  "Face used for the border line.")
+     :foreground "#bbb" :background "#ddd")
+    (t :foreground "gray" :background "gray"))
+  "The foreground color used for the thin border.
+If `line-spacing/=nil' or in text-mode, the background color is used instead.")
 
 (defvar corfu-map
   (let ((map (make-sparse-keymap)))
@@ -103,6 +110,8 @@
     (define-key map [remap next-line] #'corfu-next)
     (define-key map [remap previous-line] #'corfu-previous)
     (define-key map [remap completion-at-point] #'corfu-complete)
+    (define-key map "\en" #'corfu-next)
+    (define-key map "\ep" #'corfu-previous)
     (define-key map "\e\e\e" #'corfu-abort)
     (define-key map "\C-g" #'corfu-abort)
     (define-key map "\r" #'corfu-insert)
@@ -157,30 +166,36 @@
     (cons (round (* lh (frame-char-width)) (frame-char-height)) lh)))
 
 ;; XXX Is there a better way to generate an image? Bitmap vector?
-(defun corfu--border (w h color width)
-  "Generate border with COLOR and WIDTH and image size W*H."
-  (let ((row (funcall (if (< width 0) #'reverse #'identity)
-                      (concat (make-string (abs width) ?0)
-                              (make-string (- w (abs width)) ?1)))))
+(defun corfu--border (w h width fg bg)
+  "Generate border with FG and BG colors, WIDTH and image size W*H."
+  (let ((row (if (< width 0)
+                 (concat (make-string (- w (- width)) ?0) (make-string (- width) ?1))
+               (concat (make-string width ?1) (make-string (- w width) ?0)))))
     (propertize
      " " 'display
      `(image :data ,(format "P1\n%s %s\n%s" w h
                             (mapconcat (lambda (_) row) (number-sequence 1 h) ""))
              :type pbm :scale 1 :ascent center
-             :background ,(face-attribute color :foreground)
-             :mask (heuristic (0 0 0))))))
+             :background ,(face-attribute bg :background)
+             :foreground ,(face-attribute fg :foreground)))))
 
 (defun corfu--popup (pos idx lo bar lines)
   "Show LINES as popup at POS, with IDX highlighted and scrollbar between LO and LO+BAR."
   (let* ((size (corfu--char-size))
          ;; XXX Deactivate fancy border on terminal or if line-spacing is used
-         (fancy-ui (and (not line-spacing) (display-graphic-p)))
-         (lborder (corfu--border (car size) (cdr size) 'corfu-border 1))
-         (rborder (corfu--border (car size) (cdr size) 'corfu-border -1))
-         (rbar (corfu--border (car size) (cdr size) 'corfu-bar (- (ceiling (car size) 3))))
+         (fancy (and (not line-spacing) (display-graphic-p)))
+         (lborder-curr (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-current))
+         (rborder-curr (corfu--border (car size) (cdr size) -1 'corfu-border 'corfu-current))
+         (rbar-curr (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
+                                   'corfu-bar 'corfu-current))
+         (lborder (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-background))
+         (rborder (corfu--border (car size) (cdr size) -1 'corfu-border 'corfu-background))
+         (rbar (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
+                              'corfu-bar 'corfu-background))
          (col (+ (- pos (line-beginning-position)) corfu--base))
          (max-width (min (/ (window-total-width) 2) (- (window-total-width) col 4)))
-         (pixel-pos (cdr (window-absolute-pixel-position pos)))
+         (ypos (- (line-number-at-pos pos)
+                  (save-excursion (move-to-window-line 0) (line-number-at-pos))))
          (count (length lines))
          (row 0) (width) (formatted) (beg))
     (if (< max-width corfu-min-width)
@@ -192,8 +207,8 @@
             width (apply #'max corfu-min-width (mapcar #'string-width lines))))
     (save-excursion
       (beginning-of-line)
-      (forward-line (if (and (>= count (floor (- (window-pixel-height) pixel-pos) (cdr size)))
-                             (< count (floor pixel-pos (cdr size))))
+      (forward-line (if (and (< count ypos)
+                             (>= count (- (floor (window-pixel-height) (cdr size)) ypos 1)))
                         (- count) 1))
       (setq beg (point))
       (when (save-excursion
@@ -203,15 +218,15 @@
       (dolist (line lines)
         (let ((bufline (buffer-substring (point) (line-end-position)))
               (str (concat
-                    (if fancy-ui
-                        (propertize lborder 'face (if (= row idx) 'corfu-current 'corfu-background))
-                      (propertize " " 'face (if (= row idx) 'corfu-current 'corfu-background)))
+                    (if fancy (if (= row idx) lborder-curr lborder) " ")
                     line
                     (make-string (- width (string-width line)) 32)
-                    (if fancy-ui
-                        (propertize (if (and lo (<= lo row (+ lo bar))) rbar rborder)
-                                    'face (if (= row idx) 'corfu-current 'corfu-background))
-                      (propertize " " 'face (if (and lo (<= lo row (+ lo bar))) 'corfu-bar 'corfu-border))))))
+                    (if fancy
+                        (if (and lo (<= lo row (+ lo bar)))
+                            (if (= row idx) rbar-curr rbar)
+                          (if (= row idx) rborder-curr rborder))
+                      (propertize " " 'face (if (and lo (<= lo row (+ lo bar)))
+                                                'corfu-bar 'corfu-border))))))
           (add-face-text-property 0 (length str) (if (= row idx) 'corfu-current 'corfu-background) 'append str)
           (push (concat
                  (truncate-string-to-width bufline col 0 32) str
@@ -260,7 +275,8 @@
               (lambda (pattern cands)
                 (setq hl (lambda (x) (orderless-highlight-matches pattern x)))
                 cands)))
-    (cons (apply #'completion-all-completions args) hl)))
+    (let ((completion-styles (or corfu-completion-styles completion-styles)))
+      (cons (apply #'completion-all-completions args) hl))))
 
 (defun corfu--sort-predicate (x y)
   "Sorting predicate which compares X and Y."
@@ -277,6 +293,12 @@
         (lambda (x) (and (not (string-match-p ignore x)) (funcall pred x)))
       (lambda (x) (not (string-match-p ignore x))))))
 
+(defun corfu--move-prefix-candidates-to-front (field candidates)
+  "Move CANDIDATES which match prefix of FIELD to the beginning."
+  (let ((word (replace-regexp-in-string " .*" "" field)))
+    (nconc (seq-filter (lambda (x) (string-prefix-p word x)) candidates)
+           (seq-remove (lambda (x) (string-prefix-p word x)) candidates))))
+
 (defun corfu--recompute-candidates (str bounds metadata pt table pred)
   "Recompute candidates from STR, BOUNDS, METADATA, PT, TABLE and PRED."
   (let* ((field (substring str (car bounds) (+ pt (cdr bounds))))
@@ -291,11 +313,7 @@
     (setq all (if-let (sort (corfu--metadata-get metadata 'display-sort-function))
                   (funcall sort all)
                 (sort all #'corfu--sort-predicate)))
-    ;; Move candidates which match prefix to the beginning
-    (let* ((word (replace-regexp-in-string " .*" "" field))
-           (prefix (seq-filter (lambda (x) (string-prefix-p word x)) all))
-           (not-prefix (seq-remove (lambda (x) (string-prefix-p word x)) all)))
-      (setq all (nconc prefix not-prefix)))
+    (setq all (corfu--move-prefix-candidates-to-front field all))
     (when (and completing-file (not (string-suffix-p "/" field)))
       (setq all (corfu--move-to-front (concat field "/") all)))
     (setq all (corfu--move-to-front field all))
@@ -389,22 +407,20 @@
              (last (min (+ start corfu-count) corfu--total))
              (bar (ceiling (* corfu-count corfu-count) corfu--total))
              (lo (min (- corfu-count bar 1) (floor (* corfu-count start) corfu--total)))
-             (candidates (thread-last (seq-subseq corfu--candidates start last)
-                           (funcall corfu--highlight)
-                           (corfu--annotate metadata)
-                           (mapcar #'corfu--format-candidate))))
+             (cands (funcall corfu--highlight (seq-subseq corfu--candidates start last)))
+             (ann-cands (mapcar #'corfu--format-candidate (corfu--annotate metadata cands))))
         (when (>= curr 0)
           (let ((ov (make-overlay beg end nil t t)))
             (overlay-put ov 'priority 1000)
             (overlay-put ov 'window (selected-window))
-            (overlay-put ov 'display (nth curr candidates))
+            (overlay-put ov 'display (nth curr cands))
             (push ov corfu--overlays)))
         ;; Nonlinearity at the end and the beginning
         (when (/= start 0)
           (setq lo (max 1 lo)))
         (when (/= last corfu--total)
           (setq lo (min (- corfu-count bar 2) lo)))
-        (corfu--popup beg curr (and (> corfu--total corfu-count) lo) bar candidates)))))
+        (corfu--popup beg curr (and (> corfu--total corfu-count) lo) bar ann-cands)))))
 
 (defun corfu--post-command-hook ()
   "Refresh Corfu after last command."
@@ -446,9 +462,9 @@
   (corfu--goto (+ corfu--index corfu-count)))
 
 (defun corfu-first ()
-  "Go to first candidate."
+  "Go to first candidate, or to the prompt when the first candidate is selected."
   (interactive)
-  (corfu--goto 0))
+  (corfu--goto (if (> corfu--index 0) 0 -1)))
 
 (defun corfu-last ()
   "Go to last candidate."
@@ -459,41 +475,49 @@
   "Restore window configuration before next command."
   (let ((config (current-window-configuration))
         (other other-window-scroll-buffer)
-        (hide (make-symbol "corfu--hide-help")))
-    (fset hide (lambda ()
-                 (remove-hook 'pre-command-hook hide)
-                 (setq other-window-scroll-buffer other)
-                 (set-window-configuration config)))
-    (run-at-time 0 nil (lambda () (add-hook 'pre-command-hook hide)))))
+        (restore (make-symbol "corfu--restore")))
+    (fset restore (lambda ()
+                    (when (eq this-command #'corfu-abort)
+                      (setq this-command #'ignore))
+                    (remove-hook 'pre-command-hook restore)
+                    (setq other-window-scroll-buffer other)
+                    (set-window-configuration config)))
+    (run-at-time 0 nil (lambda () (add-hook 'pre-command-hook restore)))))
 
 ;; Company support, taken from `company.el', see `company-show-doc-buffer'.
 (defun corfu-show-documentation ()
   "Show documentation of current candidate."
   (interactive)
-  (when-let* ((fun (and (>= corfu--index 0) (plist-get corfu--extra-properties :company-doc-buffer)))
-              (res (funcall fun (nth corfu--index corfu--candidates))))
-    (let ((buf (or (car-safe res) res)))
-      (corfu--restore-on-next-command)
-      (setq other-window-scroll-buffer (get-buffer buf))
-      (set-window-start (display-buffer buf t) (or (cdr-safe res) (point-min))))))
+  (when (< corfu--index 0)
+    (user-error "No candidate selected"))
+  (if-let* ((fun (plist-get corfu--extra-properties :company-doc-buffer))
+            (res (funcall fun (nth corfu--index corfu--candidates))))
+      (let ((buf (or (car-safe res) res)))
+        (corfu--restore-on-next-command)
+        (setq other-window-scroll-buffer (get-buffer buf))
+        (set-window-start (display-buffer buf t) (or (cdr-safe res) (point-min))))
+    (user-error "No documentation available")))
 
 ;; Company support, taken from `company.el', see `company-show-location'.
 (defun corfu-show-location ()
   "Show location of current candidate."
   (interactive)
-  (when-let* ((fun (and (>= corfu--index 0) (plist-get corfu--extra-properties :company-location)))
-              (loc (funcall fun (nth corfu--index corfu--candidates))))
-    (let ((buf (or (and (bufferp (car loc)) (car loc)) (find-file-noselect (car loc) t))))
-      (corfu--restore-on-next-command)
-      (with-selected-window (display-buffer buf t)
-        (setq other-window-scroll-buffer (current-buffer))
-        (save-restriction
-          (widen)
-          (if (bufferp (car loc))
-              (goto-char (cdr loc))
-            (goto-char (point-min))
-            (forward-line (1- (cdr loc))))
-          (set-window-start nil (point)))))))
+  (when (< corfu--index 0)
+    (user-error "No candidate selected"))
+  (if-let* ((fun (plist-get corfu--extra-properties :company-location))
+            (loc (funcall fun (nth corfu--index corfu--candidates))))
+      (let ((buf (or (and (bufferp (car loc)) (car loc)) (find-file-noselect (car loc) t))))
+        (corfu--restore-on-next-command)
+        (with-selected-window (display-buffer buf t)
+          (setq other-window-scroll-buffer (current-buffer))
+          (save-restriction
+            (widen)
+            (if (bufferp (car loc))
+                (goto-char (cdr loc))
+              (goto-char (point-min))
+              (forward-line (1- (cdr loc))))
+            (set-window-start nil (point)))))
+    (user-error "No candidate location available")))
 
 (defun corfu-complete ()
   "Try to complete current input."
@@ -504,7 +528,8 @@
                  (pt (max 0 (- (point) beg)))
                  (str (buffer-substring-no-properties beg end))
                  (metadata (completion-metadata (substring str 0 pt) table pred)))
-      (pcase (completion-try-completion str table pred pt metadata)
+      (pcase (let ((completion-styles (or corfu-completion-styles completion-styles)))
+               (completion-try-completion str table pred pt metadata))
         ((and `(,newstr . ,newpt) (guard (not (equal str newstr))))
          (completion--replace beg end newstr)
          (goto-char (+ beg newpt)))))))
@@ -546,7 +571,8 @@
 
 (defun corfu--completion-in-region (&rest args)
   "Corfu completion in region function passing ARGS to `completion--in-region'."
-  (let ((completion-show-inline-help)
+  (let ((completion-styles (or corfu-completion-styles completion-styles))
+        (completion-show-inline-help)
         (completion-auto-help))
     (apply #'completion--in-region args)))
 
@@ -555,7 +581,7 @@
   "Completion Overlay Region FUnction"
   :local t
   (remove-hook 'completion-in-region-mode-hook #'corfu--mode-hook 'local)
-  (kill-local-variable completion-in-region-function)
+  (kill-local-variable 'completion-in-region-function)
   (when corfu-mode
     (add-hook 'completion-in-region-mode-hook #'corfu--mode-hook nil 'local)
     (setq-local completion-in-region-function #'corfu--completion-in-region)))
