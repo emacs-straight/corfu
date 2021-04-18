@@ -26,8 +26,8 @@
 
 ;;; Commentary:
 
-;; Corfu provides a completion overlay for the default completion in
-;; region function. The current candidates are shown in a popup
+;; Corfu enhances the default completion in region function with a
+;; completion overlay. The current candidates are shown in a popup
 ;; overlay below or above the point. Corfu can be considered the
 ;; minimalistic completion-in-region counterpart of Vertico.
 
@@ -54,11 +54,6 @@
 (defcustom corfu-cycle nil
   "Enable cycling for `corfu-next' and `corfu-previous'."
   :type 'boolean)
-
-;; XXX Maybe there should be a `completion-in-region-styles' variable in Emacs
-(defcustom corfu-completion-styles nil
-  "Completion styles to use for completion in region, defaults to `completion-styles'."
-  :type '(choice (const nil) (repeat symbol)))
 
 (defgroup corfu-faces nil
   "Faces used by Corfu."
@@ -221,12 +216,13 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
                     (if fancy (if (= row idx) lborder-curr lborder) " ")
                     line
                     (make-string (- width (string-width line)) 32)
-                    (if fancy
-                        (if (and lo (<= lo row (+ lo bar)))
-                            (if (= row idx) rbar-curr rbar)
-                          (if (= row idx) rborder-curr rborder))
-                      (propertize " " 'face (if (and lo (<= lo row (+ lo bar)))
-                                                'corfu-bar 'corfu-border))))))
+                    (cond
+                     (fancy (if (and lo (<= lo row (+ lo bar)))
+                                (if (= row idx) rbar-curr rbar)
+                              (if (= row idx) rborder-curr rborder)))
+                     (lo (propertize " " 'face (if (<= lo row (+ lo bar))
+                                                   'corfu-bar 'corfu-border)))
+                     (t " ")))))
           (add-face-text-property 0 (length str) (if (= row idx) 'corfu-current 'corfu-background) 'append str)
           (push (concat
                  (truncate-string-to-width bufline col 0 32) str
@@ -275,8 +271,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
               (lambda (pattern cands)
                 (setq hl (lambda (x) (orderless-highlight-matches pattern x)))
                 cands)))
-    (let ((completion-styles (or corfu-completion-styles completion-styles)))
-      (cons (apply #'completion-all-completions args) hl))))
+    (cons (apply #'completion-all-completions args) hl)))
 
 (defun corfu--sort-predicate (x y)
   "Sorting predicate which compares X and Y."
@@ -399,7 +394,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
            (not (and (= (car bounds) (length str)) (test-completion str table pred)))
            ;; XXX Completion is terminated if there are no matches. Add optional confirmation?
            corfu--candidates
-           ;; Single candidate
+           ;; Single candidate, which matches input exactly
            (not (equal corfu--candidates (list str))))
       (let* ((start (min (max 0 (- corfu--index (/ corfu-count 2)))
                          (max 0 (- corfu--total corfu-count))))
@@ -413,7 +408,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
           (let ((ov (make-overlay beg end nil t t)))
             (overlay-put ov 'priority 1000)
             (overlay-put ov 'window (selected-window))
-            (overlay-put ov 'display (nth curr cands))
+            (overlay-put ov 'display (concat (substring str 0 corfu--base) (nth curr cands)))
             (push ov corfu--overlays)))
         ;; Nonlinearity at the end and the beginning
         (when (/= start 0)
@@ -477,11 +472,11 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
         (other other-window-scroll-buffer)
         (restore (make-symbol "corfu--restore")))
     (fset restore (lambda ()
-                    (when (eq this-command #'corfu-abort)
-                      (setq this-command #'ignore))
-                    (remove-hook 'pre-command-hook restore)
-                    (setq other-window-scroll-buffer other)
-                    (set-window-configuration config)))
+                 (when (eq this-command #'corfu-abort)
+                   (setq this-command #'ignore))
+                 (remove-hook 'pre-command-hook restore)
+                 (setq other-window-scroll-buffer other)
+                 (set-window-configuration config)))
     (run-at-time 0 nil (lambda () (add-hook 'pre-command-hook restore)))))
 
 ;; Company support, taken from `company.el', see `company-show-doc-buffer'.
@@ -528,8 +523,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
                  (pt (max 0 (- (point) beg)))
                  (str (buffer-substring-no-properties beg end))
                  (metadata (completion-metadata (substring str 0 pt) table pred)))
-      (pcase (let ((completion-styles (or corfu-completion-styles completion-styles)))
-               (completion-try-completion str table pred pt metadata))
+      (pcase (completion-try-completion str table pred pt metadata)
         ((and `(,newstr . ,newpt) (guard (not (equal str newstr))))
          (completion--replace beg end newstr)
          (goto-char (+ beg newpt)))))))
@@ -571,15 +565,14 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
 
 (defun corfu--completion-in-region (&rest args)
   "Corfu completion in region function passing ARGS to `completion--in-region'."
-  (let ((completion-styles (or corfu-completion-styles completion-styles))
-        (completion-show-inline-help)
+  (let ((completion-show-inline-help)
         (completion-auto-help))
     (apply #'completion--in-region args)))
 
 ;;;###autoload
 (define-minor-mode corfu-mode
   "Completion Overlay Region FUnction"
-  :local t
+  :global nil
   (remove-hook 'completion-in-region-mode-hook #'corfu--mode-hook 'local)
   (kill-local-variable 'completion-in-region-function)
   (when corfu-mode
