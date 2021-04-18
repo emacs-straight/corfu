@@ -47,9 +47,10 @@
   "Maximal number of candidates to show."
   :type 'integer)
 
-(defcustom corfu-min-width 15
-  "Minimum popup width."
-  :type 'integer)
+(defcustom corfu-width-limits
+  (cons 15 80)
+  "Popup width limits."
+  :type '(cons integer integer))
 
 (defcustom corfu-cycle nil
   "Enable cycling for `corfu-next' and `corfu-previous'."
@@ -188,18 +189,19 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
          (rbar (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
                               'corfu-bar 'corfu-background))
          (col (+ (- pos (line-beginning-position)) corfu--base))
-         (max-width (min (/ (window-total-width) 2) (- (window-total-width) col 4)))
+         (max-width (min (cdr corfu-width-limits) (/ (window-total-width) 2)))
+         (rest-width (- (window-total-width) col 4))
          (ypos (- (line-number-at-pos pos)
                   (save-excursion (move-to-window-line 0) (line-number-at-pos))))
          (count (length lines))
          (row 0) (width) (formatted) (beg))
-    (if (< max-width corfu-min-width)
-        (setq width (max corfu-min-width (/ (window-total-width) 2))
-              lines (mapcar (lambda (x) (truncate-string-to-width x width)) lines)
-              width (apply #'max (mapcar #'string-width lines))
+    (if (< rest-width (car corfu-width-limits))
+        (setq lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
+              width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))
               col (max 0 (- col width 2)))
-      (setq lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
-            width (apply #'max corfu-min-width (mapcar #'string-width lines))))
+      (setq max-width (min rest-width max-width)
+            lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
+            width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))))
     (save-excursion
       (beginning-of-line)
       (forward-line (if (and (< count ypos)
@@ -331,7 +333,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   (setq corfu--overlays nil)
   (unless (or (< corfu--index 0)
               (string-match-p corfu--keep-alive (prin1-to-string this-command)))
-    (corfu-insert)))
+    (corfu--insert 'exact))) ;; Complete with "exact" input
 
 (defun corfu-abort ()
   "Abort Corfu completion."
@@ -387,11 +389,8 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
       (corfu--update-candidates str bounds metadata pt table pred))
     (when (and
            ;; Empty input
-           (or (eq this-command 'completion-at-point)
-               (string-match-p corfu--keep-alive (prin1-to-string this-command))
-               (/= beg end))
-           ;; Input after boundary is empty
-           (not (and (= (car bounds) (length str)) (test-completion str table pred)))
+           (or (eq this-command 'completion-at-point) (/= beg end)
+               (string-match-p corfu--keep-alive (prin1-to-string this-command)))
            ;; XXX Completion is terminated if there are no matches. Add optional confirmation?
            corfu--candidates
            ;; Single candidate, which matches input exactly
@@ -472,11 +471,11 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
         (other other-window-scroll-buffer)
         (restore (make-symbol "corfu--restore")))
     (fset restore (lambda ()
-                 (when (eq this-command #'corfu-abort)
-                   (setq this-command #'ignore))
-                 (remove-hook 'pre-command-hook restore)
-                 (setq other-window-scroll-buffer other)
-                 (set-window-configuration config)))
+                    (when (eq this-command #'corfu-abort)
+                      (setq this-command #'ignore))
+                    (remove-hook 'pre-command-hook restore)
+                    (setq other-window-scroll-buffer other)
+                    (set-window-configuration config)))
     (run-at-time 0 nil (lambda () (add-hook 'pre-command-hook restore)))))
 
 ;; Company support, taken from `company.el', see `company-show-doc-buffer'.
@@ -518,7 +517,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   "Try to complete current input."
   (interactive)
   (if (>= corfu--index 0)
-      (corfu-insert)
+      (corfu--insert nil) ;; Continue completion
     (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
                  (pt (max 0 (- (point) beg)))
                  (str (buffer-substring-no-properties beg end))
@@ -528,23 +527,32 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
          (completion--replace beg end newstr)
          (goto-char (+ beg newpt)))))))
 
+(defun corfu--insert (status)
+  "Insert current candidate, exit with STATUS if non-nil."
+  (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
+               (str (buffer-substring-no-properties beg end))
+               (newstr (if (and (< corfu--index 0) (not (equal str ""))
+                                (test-completion str table pred))
+                           ;; No candidate selected and current input is a valid completion.
+                           ;; For example str can be a valid path, e.g., ~/dir/.
+                           str
+                         (concat (substring str 0 corfu--base)
+                                 (substring-no-properties (nth (max 0 corfu--index) corfu--candidates))))))
+    (completion--replace beg end newstr)
+    (if (not status)
+        (setq corfu--index -1) ;; Reset selection, but continue completion.
+      ;; XXX Is the :exit-function handling sufficient?
+      (when-let (exit (plist-get corfu--extra-properties :exit-function))
+        (funcall exit newstr status))
+      (completion-in-region-mode -1))))
+
 (defun corfu-insert ()
   "Insert current candidate."
   (interactive)
-  (pcase-let* ((`(,beg ,end . _) completion-in-region--data)
-               (str (buffer-substring-no-properties beg end))
-               (newstr (concat (substring str 0 corfu--base)
-                               (substring-no-properties (nth (max 0 corfu--index) corfu--candidates)))))
-    (completion--replace beg end newstr)
-    ;; XXX Is the :exit-function handling sufficient?
-    (when-let (exit (plist-get corfu--extra-properties :exit-function))
-      (funcall exit newstr 'finished))
-    (completion-in-region-mode -1)))
+  (corfu--insert 'finished))
 
 (defun corfu--setup ()
   "Setup Corfu completion state."
-  ;; Keep completion alive when popup is shown (disable predicate check!)
-  (remove-hook 'post-command-hook #'completion-in-region--postch)
   (setq corfu--extra-properties completion-extra-properties)
   (setcdr (assq #'completion-in-region-mode minor-mode-overriding-map-alist) corfu-map)
   (add-hook 'pre-command-hook #'corfu--pre-command-hook nil 'local)
@@ -566,7 +574,10 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
 (defun corfu--completion-in-region (&rest args)
   "Corfu completion in region function passing ARGS to `completion--in-region'."
   (let ((completion-show-inline-help)
-        (completion-auto-help))
+        (completion-auto-help)
+        ;; Disable original predicate check, keep completion alive when popup is shown
+        (completion-in-region-mode-predicate
+         (and completion-in-region-mode-predicate (lambda () t))))
     (apply #'completion--in-region args)))
 
 ;;;###autoload
