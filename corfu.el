@@ -306,7 +306,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
                                            pred)
                                          pt metadata))
          (all (car all-hl))
-         (base (if-let (last (last all)) (prog1 (cdr last) (setcdr last nil)) 0)))
+         (base (or (when-let (z (last all)) (prog1 (cdr z) (setcdr z nil))) 0)))
     (setq all (if-let (sort (corfu--metadata-get metadata 'display-sort-function))
                   (funcall sort all)
                 (sort all #'corfu--sort-predicate)))
@@ -530,20 +530,20 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
 (defun corfu--insert (status)
   "Insert current candidate, exit with STATUS if non-nil."
   (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
-               (str (buffer-substring-no-properties beg end))
-               (newstr (if (and (< corfu--index 0) (not (equal str ""))
-                                (test-completion str table pred))
-                           ;; No candidate selected and current input is a valid completion.
-                           ;; For example str can be a valid path, e.g., ~/dir/.
-                           str
-                         (concat (substring str 0 corfu--base)
-                                 (substring-no-properties (nth (max 0 corfu--index) corfu--candidates))))))
-    (completion--replace beg end newstr)
+               (str (buffer-substring-no-properties beg end)))
+    ;; Replace if candidate is selected or if current input is not valid completion.
+    ;; For example str can be a valid path, e.g., ~/dir/.
+    (when (or (>= corfu--index 0) (equal str "")
+              (not (test-completion str table pred)))
+      (setq str (concat (substring str 0 corfu--base)
+                        (substring-no-properties
+                         (nth (max 0 corfu--index) corfu--candidates))))
+      (completion--replace beg end str))
     (if (not status)
         (setq corfu--index -1) ;; Reset selection, but continue completion.
       ;; XXX Is the :exit-function handling sufficient?
       (when-let (exit (plist-get corfu--extra-properties :exit-function))
-        (funcall exit newstr status))
+        (funcall exit str status))
       (completion-in-region-mode -1))))
 
 (defun corfu-insert ()
