@@ -248,6 +248,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
     list))
 
 ;; bug#47711: Deferred highlighting for `completion-all-completions'
+;; XXX There is one complication: `completion--twq-all' already adds `completions-common-part'.
 (declare-function orderless-highlight-matches "ext:orderless")
 (defun corfu--all-completions (&rest args)
   "Compute all completions for ARGS with deferred highlighting."
@@ -535,6 +536,12 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
     ;; For example str can be a valid path, e.g., ~/dir/.
     (when (or (>= corfu--index 0) (equal str "")
               (not (test-completion str table pred)))
+      ;; XXX There is a small bug here, depending on interpretation.
+      ;; When completing "~/emacs/master/li|/calc" where "|" is the
+      ;; cursor, then the candidate only includes the prefix
+      ;; "~/emacs/master/lisp/", but not the suffix "/calc". Default
+      ;; completion has the same problem when selecting in the
+      ;; *Completions* buffer.
       (setq str (concat (substring str 0 corfu--base)
                         (substring-no-properties
                          (nth (max 0 corfu--index) corfu--candidates))))
