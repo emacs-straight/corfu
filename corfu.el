@@ -334,7 +334,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   (setq corfu--overlays nil)
   (unless (or (< corfu--index 0)
               (string-match-p corfu--keep-alive (prin1-to-string this-command)))
-    (corfu--insert 'exact))) ;; Complete with "exact" input
+    (corfu--insert 'exact)))
 
 (defun corfu-abort ()
   "Abort Corfu completion."
@@ -388,14 +388,13 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
                              (t (cons 0 (length after)))))))
     (unless (equal corfu--input (cons str pt))
       (corfu--update-candidates str bounds metadata pt table pred))
-    (when (and
-           ;; Empty input
-           (or (eq this-command 'completion-at-point) (/= beg end)
-               (string-match-p corfu--keep-alive (prin1-to-string this-command)))
-           ;; XXX Completion is terminated if there are no matches. Add optional confirmation?
-           corfu--candidates
-           ;; Single candidate, which matches input exactly
-           (not (equal corfu--candidates (list str))))
+    (cond
+     ((and
+       corfu--candidates ;; 1. There are candidates (XXX: Optional confirmation if there are none?)
+       (not (equal corfu--candidates (list str))) ;; 2. Not a single exactly matching candidate
+       (or (/= beg end)  ;; 3. Input is non-empty
+           (eq this-command 'completion-at-point)
+           (string-match-p corfu--keep-alive (prin1-to-string this-command))))
       (let* ((start (min (max 0 (- corfu--index (/ corfu-count 2)))
                          (max 0 (- corfu--total corfu-count))))
              (curr (- corfu--index start))
@@ -415,7 +414,13 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
           (setq lo (max 1 lo)))
         (when (/= last corfu--total)
           (setq lo (min (- corfu-count bar 2) lo)))
-        (corfu--popup beg curr (and (> corfu--total corfu-count) lo) bar ann-cands)))))
+        (corfu--popup beg curr (and (> corfu--total corfu-count) lo) bar ann-cands)))
+     ;; When after `completion-at-point/corfu-complete', no further completion is possible and the
+     ;; current string is a valid match, exit with status 'finished.
+     ((and (memq this-command '(corfu-complete completion-at-point))
+           (not (stringp (try-completion str table pred)))
+           (test-completion str table pred))
+      (corfu--done str 'finished)))))
 
 (defun corfu--post-command-hook ()
   "Refresh Corfu after last command."
@@ -545,13 +550,16 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
       (setq str (concat (substring str 0 corfu--base)
                         (substring-no-properties
                          (nth (max 0 corfu--index) corfu--candidates))))
-      (completion--replace beg end str))
-    (if (not status)
-        (setq corfu--index -1) ;; Reset selection, but continue completion.
-      ;; XXX Is the :exit-function handling sufficient?
-      (when-let (exit (plist-get corfu--extra-properties :exit-function))
-        (funcall exit str status))
-      (completion-in-region-mode -1))))
+      (completion--replace beg end str)
+      (setq corfu--index -1)) ;; Reset selection, but continue completion.
+    (when status (corfu--done str status)))) ;; Exit with status
+
+(defun corfu--done (str status)
+  "Call the `:exit-function' with STR and STATUS and exit completion."
+  ;; XXX Is the :exit-function handling sufficient?
+  (when-let (exit (plist-get corfu--extra-properties :exit-function))
+    (funcall exit str status))
+  (completion-in-region-mode -1))
 
 (defun corfu-insert ()
   "Insert current candidate."
