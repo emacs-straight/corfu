@@ -176,33 +176,34 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
              :foreground ,(face-attribute fg :foreground)))))
 
 (defun corfu--popup (pos idx lo bar lines)
-  "Show LINES as popup at POS, with IDX highlighted and scrollbar between LO and LO+BAR."
-  (let* ((size (corfu--char-size))
-         ;; XXX Deactivate fancy border on terminal or if line-spacing is used
-         (fancy (and (not line-spacing) (display-graphic-p)))
-         (lborder-curr (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-current))
-         (rborder-curr (corfu--border (car size) (cdr size) -1 'corfu-border 'corfu-current))
-         (rbar-curr (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
-                                   'corfu-bar 'corfu-current))
-         (lborder (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-background))
-         (rborder (corfu--border (car size) (cdr size) -1 'corfu-border 'corfu-background))
-         (rbar (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
-                              'corfu-bar 'corfu-background))
-         (col (+ (- pos (line-beginning-position)) corfu--base))
-         (max-width (min (cdr corfu-width-limits) (/ (window-total-width) 2)))
-         (rest-width (- (window-total-width) col 4))
-         (ypos (- (line-number-at-pos pos)
-                  (save-excursion (move-to-window-line 0) (line-number-at-pos))))
-         (count (length lines))
-         (row 0) (width) (formatted) (beg))
-    (if (< rest-width (car corfu-width-limits))
-        (setq lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
-              width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))
-              col (max 0 (- col width 2)))
-      (setq max-width (min rest-width max-width)
-            lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
-            width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))))
-    (save-excursion
+  "Show LINES as popup at POS, with IDX highlighted and scrollbar from LO to LO+BAR."
+  (save-excursion
+    (goto-char pos)
+    (let* ((size (corfu--char-size))
+           ;; XXX Deactivate fancy border on terminal or if line-spacing is used
+           (fancy (and (not line-spacing) (display-graphic-p)))
+           (lborder-curr (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-current))
+           (rborder-curr (corfu--border (car size) (cdr size) -1 'corfu-border 'corfu-current))
+           (rbar-curr (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
+                                     'corfu-bar 'corfu-current))
+           (lborder (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-background))
+           (rborder (corfu--border (car size) (cdr size) -1 'corfu-border 'corfu-background))
+           (rbar (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
+                                'corfu-bar 'corfu-background))
+           (max-width (min (cdr corfu-width-limits) (/ (window-total-width) 2)))
+           (col (- pos (line-beginning-position)))
+           (rest-width (- (window-total-width) col 4))
+           (ypos (- (line-number-at-pos)
+                    (save-excursion (move-to-window-line 0) (line-number-at-pos))))
+           (count (length lines))
+           (row 0) (width) (formatted) (beg))
+      (if (< rest-width (car corfu-width-limits))
+          (setq lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
+                width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))
+                col (max 0 (- col width 2)))
+        (setq max-width (min rest-width max-width)
+              lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
+              width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))))
       (beginning-of-line)
       (forward-line (if (and (< count ypos)
                              (>= count (- (floor (window-pixel-height) (cdr size)) ypos 1)))
@@ -297,9 +298,20 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
     (nconc (seq-filter (lambda (x) (string-prefix-p word x)) candidates)
            (seq-remove (lambda (x) (string-prefix-p word x)) candidates))))
 
-(defun corfu--recompute-candidates (str bounds metadata pt table pred)
-  "Recompute candidates from STR, BOUNDS, METADATA, PT, TABLE and PRED."
-  (let* ((field (substring str (car bounds) (+ pt (cdr bounds))))
+(defun corfu--recompute-candidates (str metadata pt table pred)
+  "Recompute candidates from STR, METADATA, PT, TABLE and PRED."
+  (let* ((before (substring str 0 pt))
+         (after (substring str pt))
+         ;; bug#47678: `completion-boundaries` fails for `partial-completion`
+         ;; if the cursor is moved between the slashes of "~//".
+         ;; See also vertico.el which has the same issue.
+         (bounds (or (condition-case nil
+                         (completion-boundaries before
+                                                table
+                                                pred
+                                                after)
+                       (t (cons 0 (length after))))))
+         (field (substring str (car bounds) (+ pt (cdr bounds))))
          (completing-file (eq (corfu--metadata-get metadata 'category) 'file))
          (all-hl (corfu--all-completions str table
                                          (if completing-file
@@ -317,10 +329,10 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
     (setq all (corfu--move-to-front field all))
     (list base (length all) all (cdr all-hl))))
 
-(defun corfu--update-candidates (str bounds metadata pt table pred)
-  "Update candidates from STR, BOUNDS, METADATA, PT, TABLE and PRED."
+(defun corfu--update-candidates (str metadata pt table pred)
+  "Update candidates from STR, METADATA, PT, TABLE and PRED."
   (pcase (let ((while-no-input-ignore-events '(selection-request)))
-           (while-no-input (corfu--recompute-candidates str bounds metadata pt table pred)))
+           (while-no-input (corfu--recompute-candidates str metadata pt table pred)))
     (`(,base ,total ,candidates ,hl)
      (setq corfu--input (cons str pt)
            corfu--candidates candidates
@@ -369,25 +381,37 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
                 suffix
               (propertize suffix 'face 'completions-annotations)))))
 
-(defun corfu--update-display ()
+(defun corfu--update-display (beg end str metadata)
+  "Update display given BEG, END, STR and METADATA."
+  (let* ((start (min (max 0 (- corfu--index (/ corfu-count 2)))
+                     (max 0 (- corfu--total corfu-count))))
+         (curr (- corfu--index start))
+         (last (min (+ start corfu-count) corfu--total))
+         (bar (ceiling (* corfu-count corfu-count) corfu--total))
+         (lo (min (- corfu-count bar 1) (floor (* corfu-count start) corfu--total)))
+         (cands (funcall corfu--highlight (seq-subseq corfu--candidates start last)))
+         (ann-cands (mapcar #'corfu--format-candidate (corfu--annotate metadata cands))))
+    (when (>= curr 0)
+      (let ((ov (make-overlay beg end nil t t)))
+        (overlay-put ov 'priority 1000)
+        (overlay-put ov 'window (selected-window))
+        (overlay-put ov 'display (concat (substring str 0 corfu--base) (nth curr cands)))
+        (push ov corfu--overlays)))
+    ;; Nonlinearity at the end and the beginning
+    (when (/= start 0)
+      (setq lo (max 1 lo)))
+    (when (/= last corfu--total)
+      (setq lo (min (- corfu-count bar 2) lo)))
+    (corfu--popup (+ beg corfu--base) curr (and (> corfu--total corfu-count) lo) bar ann-cands)))
+
+(defun corfu--update ()
   "Refresh Corfu UI."
   (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
                (pt (- (point) beg))
                (str (buffer-substring-no-properties beg end))
-               (metadata (completion-metadata (substring str 0 pt) table pred))
-               (before (substring str 0 pt))
-               (after (substring str pt))
-               ;; bug#47678: `completion-boundaries` fails for `partial-completion`
-               ;; if the cursor is moved between the slashes of "~//".
-               ;; See also vertico.el which has the same issue.
-               (bounds (or (condition-case nil
-                               (completion-boundaries before
-                                                      table
-                                                      pred
-                                                      after)
-                             (t (cons 0 (length after)))))))
+               (metadata (completion-metadata (substring str 0 pt) table pred)))
     (unless (equal corfu--input (cons str pt))
-      (corfu--update-candidates str bounds metadata pt table pred))
+      (corfu--update-candidates str metadata pt table pred))
     (cond
      ((and
        corfu--candidates ;; 1. There are candidates (XXX: Optional confirmation if there are none?)
@@ -395,26 +419,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
        (or (/= beg end)  ;; 3. Input is non-empty
            (eq this-command 'completion-at-point)
            (string-match-p corfu--keep-alive (prin1-to-string this-command))))
-      (let* ((start (min (max 0 (- corfu--index (/ corfu-count 2)))
-                         (max 0 (- corfu--total corfu-count))))
-             (curr (- corfu--index start))
-             (last (min (+ start corfu-count) corfu--total))
-             (bar (ceiling (* corfu-count corfu-count) corfu--total))
-             (lo (min (- corfu-count bar 1) (floor (* corfu-count start) corfu--total)))
-             (cands (funcall corfu--highlight (seq-subseq corfu--candidates start last)))
-             (ann-cands (mapcar #'corfu--format-candidate (corfu--annotate metadata cands))))
-        (when (>= curr 0)
-          (let ((ov (make-overlay beg end nil t t)))
-            (overlay-put ov 'priority 1000)
-            (overlay-put ov 'window (selected-window))
-            (overlay-put ov 'display (concat (substring str 0 corfu--base) (nth curr cands)))
-            (push ov corfu--overlays)))
-        ;; Nonlinearity at the end and the beginning
-        (when (/= start 0)
-          (setq lo (max 1 lo)))
-        (when (/= last corfu--total)
-          (setq lo (min (- corfu-count bar 2) lo)))
-        (corfu--popup beg curr (and (> corfu--total corfu-count) lo) bar ann-cands)))
+      (corfu--update-display beg end str metadata))
      ;; When after `completion-at-point/corfu-complete', no further completion is possible and the
      ;; current string is a valid match, exit with status 'finished.
      ((and (memq this-command '(corfu-complete completion-at-point))
@@ -427,7 +432,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   (pcase completion-in-region--data
     (`(,beg ,end ,_table ,_pred)
      (when (and (eq (marker-buffer beg) (current-buffer)) (<= beg (point) end))
-       (corfu--update-display))))
+       (corfu--update))))
   (unless corfu--overlays
     (completion-in-region-mode -1)))
 
