@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -179,7 +179,8 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   "Show LINES as popup at POS, with IDX highlighted and scrollbar from LO to LO+BAR."
   (save-excursion
     (goto-char pos)
-    (let* ((size (corfu--char-size))
+    (let* ((inhibit-field-text-motion t) ;; ignore field boundaries (shell-mode!)
+           (size (corfu--char-size))
            ;; XXX Deactivate fancy border on terminal or if line-spacing is used
            (fancy (and (not line-spacing) (display-graphic-p)))
            (lborder-curr (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-current))
