@@ -56,6 +56,15 @@
   "Enable cycling for `corfu-next' and `corfu-previous'."
   :type 'boolean)
 
+(defcustom corfu-confirm "(No match)"
+  "Show this confirmation string if there is no match.
+Set to nil in order to disable confirmation."
+  :type '(choice (const nil) string))
+
+(defcustom corfu-excluded-modes nil
+  "List of modes excluded by `corfu-global-mode'."
+  :type '(repeat symbol))
+
 (defgroup corfu-faces nil
   "Faces used by Corfu."
   :group 'corfu
@@ -175,8 +184,8 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
              :background ,(face-attribute bg :background)
              :foreground ,(face-attribute fg :foreground)))))
 
-(defun corfu--popup (pos idx lo bar lines)
-  "Show LINES as popup at POS, with IDX highlighted and scrollbar from LO to LO+BAR."
+(defun corfu--popup (pos lines &optional curr lo bar)
+  "Show LINES as popup at POS, with CURR highlighted and scrollbar from LO to LO+BAR."
   (save-excursion
     (goto-char pos)
     (let* ((inhibit-field-text-motion t) ;; ignore field boundaries (shell-mode!)
@@ -207,7 +216,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
               width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))))
       (beginning-of-line)
       (forward-line (if (and (< count ypos)
-                             (>= count (- (floor (window-pixel-height) (cdr size)) ypos 1)))
+                             (>= count (- (floor (window-pixel-height) (cdr size)) ypos 2)))
                         (- count) 1))
       (setq beg (point))
       (when (save-excursion
@@ -217,17 +226,17 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
       (dolist (line lines)
         (let ((bufline (buffer-substring (point) (line-end-position)))
               (str (concat
-                    (if fancy (if (= row idx) lborder-curr lborder) " ")
+                    (if fancy (if (eq row curr) lborder-curr lborder) " ")
                     line
                     (make-string (- width (string-width line)) 32)
                     (cond
                      (fancy (if (and lo (<= lo row (+ lo bar)))
-                                (if (= row idx) rbar-curr rbar)
-                              (if (= row idx) rborder-curr rborder)))
+                                (if (eq row curr) rbar-curr rbar)
+                              (if (eq row curr) rborder-curr rborder)))
                      (lo (propertize " " 'face (if (<= lo row (+ lo bar))
                                                    'corfu-bar 'corfu-border)))
                      (t " ")))))
-          (add-face-text-property 0 (length str) (if (= row idx) 'corfu-current 'corfu-background) 'append str)
+          (add-face-text-property 0 (length str) (if (eq row curr) 'corfu-current 'corfu-background) 'append str)
           (push (concat
                  (truncate-string-to-width bufline col 0 32) str
                  (substring bufline (length (truncate-string-to-width bufline (+ col width 2))))
@@ -346,7 +355,8 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   (mapc #'delete-overlay corfu--overlays)
   (setq corfu--overlays nil)
   (unless (or (< corfu--index 0)
-              (string-match-p corfu--keep-alive (prin1-to-string this-command)))
+              (and (symbolp this-command)
+                   (string-match-p corfu--keep-alive (symbol-name this-command))))
     (corfu--insert 'exact)))
 
 (defun corfu-abort ()
@@ -382,7 +392,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
                 suffix
               (propertize suffix 'face 'completions-annotations)))))
 
-(defun corfu--update-display (beg end str metadata)
+(defun corfu--show-candidates (beg end str metadata)
   "Update display given BEG, END, STR and METADATA."
   (let* ((start (min (max 0 (- corfu--index (/ corfu-count 2)))
                      (max 0 (- corfu--total corfu-count))))
@@ -403,24 +413,37 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
       (setq lo (max 1 lo)))
     (when (/= last corfu--total)
       (setq lo (min (- corfu-count bar 2) lo)))
-    (corfu--popup (+ beg corfu--base) curr (and (> corfu--total corfu-count) lo) bar ann-cands)))
+    (corfu--popup (+ beg corfu--base) ann-cands curr (and (> corfu--total corfu-count) lo) bar)))
 
 (defun corfu--update ()
   "Refresh Corfu UI."
   (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
                (pt (- (point) beg))
                (str (buffer-substring-no-properties beg end))
-               (metadata (completion-metadata (substring str 0 pt) table pred)))
-    (unless (equal corfu--input (cons str pt))
-      (corfu--update-candidates str metadata pt table pred))
+               (metadata (completion-metadata (substring str 0 pt) table pred))
+               (initializing (not corfu--input)))
     (cond
-     ((and
-       corfu--candidates ;; 1. There are candidates (XXX: Optional confirmation if there are none?)
-       (not (equal corfu--candidates (list str))) ;; 2. Not a single exactly matching candidate
-       (or (/= beg end)  ;; 3. Input is non-empty
-           (eq this-command 'completion-at-point)
-           (string-match-p corfu--keep-alive (prin1-to-string this-command))))
-      (corfu--update-display beg end str metadata))
+     ;; XXX Guard against errors during candidate generation.
+     ;; Turn off completion immediately if there are errors
+     ;; For example dabbrev throws error "No dynamic expansion ... found".
+     ;; TODO Report this as a bug? Are completion tables supposed to throw errors?
+     ((condition-case err
+          (unless (equal corfu--input (cons str pt))
+            (and (corfu--update-candidates str metadata pt table pred)) nil)
+        (t (message "%s" (error-message-string err)))))
+     ((and (not corfu--candidates)                    ;; 1. There are no candidates
+           initializing)                              ;; 2. Initializing, first retrieval of candidates.
+      (minibuffer-message "No match"))                ;; ==> Show error message
+     ((and (not corfu--candidates)                    ;; 1. There are no candidates
+           corfu-confirm)                             ;; 2. Confirmation is enabled
+      (corfu--popup beg (list corfu-confirm)))        ;; ==> Show confirm popup
+     ((and corfu--candidates                          ;; 1. There exist candidates
+           (not (equal corfu--candidates (list str))) ;; 2. Not a sole exactly matching candidate
+           (or (/= beg end)                           ;; 3. Input is non-empty
+               (eq this-command 'completion-at-point) ;; ==> Show candidates popup
+               (and (symbolp this-command)
+                    (string-match-p corfu--keep-alive (symbol-name this-command)))))
+      (corfu--show-candidates beg end str metadata))
      ;; When after `completion-at-point/corfu-complete', no further completion is possible and the
      ;; current string is a valid match, exit with status 'finished.
      ((and (memq this-command '(corfu-complete completion-at-point))
@@ -488,7 +511,7 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
                     (remove-hook 'pre-command-hook restore)
                     (setq other-window-scroll-buffer other)
                     (set-window-configuration config)))
-    (run-at-time 0 nil (lambda () (add-hook 'pre-command-hook restore)))))
+    (add-hook 'pre-command-hook restore)))
 
 ;; Company support, taken from `company.el', see `company-show-doc-buffer'.
 (defun corfu-show-documentation ()
@@ -514,8 +537,8 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
             (loc (funcall fun (nth corfu--index corfu--candidates))))
       (let ((buf (or (and (bufferp (car loc)) (car loc)) (find-file-noselect (car loc) t))))
         (corfu--restore-on-next-command)
+        (setq other-window-scroll-buffer buf)
         (with-selected-window (display-buffer buf t)
-          (setq other-window-scroll-buffer (current-buffer))
           (save-restriction
             (widen)
             (if (bufferp (car loc))
@@ -570,7 +593,9 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
 (defun corfu-insert ()
   "Insert current candidate."
   (interactive)
-  (corfu--insert 'finished))
+  (if (> corfu--total 0)
+      (corfu--insert 'finished)
+    (completion-in-region-mode -1)))
 
 (defun corfu--setup ()
   "Setup Corfu completion state."
@@ -596,9 +621,10 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   "Corfu completion in region function passing ARGS to `completion--in-region'."
   (let ((completion-show-inline-help)
         (completion-auto-help)
-        ;; Disable original predicate check, keep completion alive when popup is shown
-        (completion-in-region-mode-predicate
-         (and completion-in-region-mode-predicate (lambda () t))))
+        ;; XXX Disable original predicate check, keep completion alive when
+        ;; popup is shown. Since the predicate is set always, it is ensured
+        ;; that `completion-in-region-mode' is turned on.
+        (completion-in-region-mode-predicate (lambda () t)))
     (apply #'completion--in-region args)))
 
 ;;;###autoload
@@ -610,6 +636,16 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   (when corfu-mode
     (add-hook 'completion-in-region-mode-hook #'corfu--mode-hook nil 'local)
     (setq-local completion-in-region-function #'corfu--completion-in-region)))
+
+;;;###autoload
+(define-globalized-minor-mode corfu-global-mode corfu-mode corfu--on)
+
+(defun corfu--on ()
+  "Turn `corfu-mode' on."
+  (unless (or noninteractive
+              (eq (aref (buffer-name) 0) ?\s)
+              (memq major-mode corfu-excluded-modes))
+    (corfu-mode 1)))
 
 (provide 'corfu)
 ;;; corfu.el ends here
