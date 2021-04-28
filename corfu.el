@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.3
+;; Version: 0.4
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -28,8 +28,8 @@
 
 ;; Corfu enhances the default completion in region function with a
 ;; completion overlay. The current candidates are shown in a popup
-;; overlay below or above the point. Corfu can be considered the
-;; minimalistic completion-in-region counterpart of Vertico.
+;; below or above the point. Corfu can be considered the minimalistic
+;; completion-in-region counterpart of Vertico.
 
 ;;; Code:
 
@@ -56,7 +56,7 @@
   "Enable cycling for `corfu-next' and `corfu-previous'."
   :type 'boolean)
 
-(defcustom corfu-confirm "(No match)"
+(defcustom corfu-no-match (propertize "No match" 'face 'italic)
   "Show this confirmation string if there is no match.
 Set to nil in order to disable confirmation."
   :type '(choice (const nil) string))
@@ -72,37 +72,31 @@ Set to nil in order to disable confirmation."
 
 (defface corfu-background
   '((((class color) (min-colors 88) (background dark))
-     :background "#222" :inherit default)
+     :background "#222")
     (((class color) (min-colors 88) (background light))
-     :background "#ffe" :inherit default)
-    (t :background "gray" :foreground "black" :inherit default))
-  "Face used to for the overlay background.")
+     :background "#ffe")
+    (t :background "gray"))
+  "Face used to for the popup background.")
 
 (defface corfu-current
   '((((class color) (min-colors 88) (background dark))
-     :background "#137" :inherit default)
+     :background "#137" :foreground "white")
     (((class color) (min-colors 88) (background light))
-     :background "#cef" :inherit default)
-    (t :background "blue" :foreground "white" :inherit default))
+     :background "#cef" :foreground "black")
+    (t :background "blue" :foreground "white"))
   "Face used to highlight the currently selected candidate.")
 
 (defface corfu-bar
-  '((((class color) (min-colors 88) (background dark))
-     :foreground "#444" :background "#bbb")
-    (((class color) (min-colors 88) (background light))
-     :foreground "#bbb" :background "#444")
-    (t :foreground "gray" :background "black"))
-  "The foreground color is used for the scrollbar indicator.
-If `line-spacing/=nil' or in text-mode, the background color is used instead.")
+  '((((class color) (min-colors 88) (background dark)) :background "#444")
+    (((class color) (min-colors 88) (background light)) :background "#bbb")
+    (t :background "gray"))
+  "The background color is used for the scrollbar indicator.")
 
 (defface corfu-border
-  '((((class color) (min-colors 88) (background dark))
-     :foreground "#444" :background "#444" )
-    (((class color) (min-colors 88) (background light))
-     :foreground "#bbb" :background "#ddd")
-    (t :foreground "gray" :background "gray"))
-  "The foreground color used for the thin border.
-If `line-spacing/=nil' or in text-mode, the background color is used instead.")
+  '((((class color) (min-colors 88) (background dark)) :background "#444")
+    (((class color) (min-colors 88) (background light)) :background "#bbb")
+    (t :background "gray"))
+  "The background color used for the thin border.")
 
 (defvar corfu-map
   (let ((map (make-sparse-keymap)))
@@ -144,11 +138,14 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
 (defvar-local corfu--input nil
   "Cons of last prompt contents and point or t.")
 
-(defvar-local corfu--overlays nil
-  "Overlay showing the candidates.")
+(defvar-local corfu--overlay nil
+  "Current candidate overlay.")
 
 (defvar-local corfu--extra-properties nil
   "Extra completion properties.")
+
+(defvar corfu--frame nil
+  "Popup frame.")
 
 (defvar corfu--keep-alive
   ;; nil is undefined command
@@ -162,95 +159,108 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
     corfu--index
     corfu--input
     corfu--total
-    corfu--overlays
+    corfu--overlay
     corfu--extra-properties)
   "Buffer-local state variables used by Corfu.")
 
-(defun corfu--char-size ()
-  "Return character size in pixels."
-  (let ((lh (line-pixel-height)))
-    (cons (round (* lh (frame-char-width)) (frame-char-height)) lh)))
-
-;; XXX Is there a better way to generate an image? Bitmap vector?
-(defun corfu--border (w h width fg bg)
-  "Generate border with FG and BG colors, WIDTH and image size W*H."
-  (let ((row (if (< width 0)
-                 (concat (make-string (- w (- width)) ?0) (make-string (- width) ?1))
-               (concat (make-string width ?1) (make-string (- w width) ?0)))))
-    (propertize
-     " " 'display
-     `(image :data ,(format "P1\n%s %s\n%s" w h
-                            (mapconcat (lambda (_) row) (number-sequence 1 h) ""))
-             :type pbm :scale 1 :ascent center
-             :background ,(face-attribute bg :background)
-             :foreground ,(face-attribute fg :foreground)))))
+;; Function adapted from posframe.el by tumashu
+(defun corfu--child-frame (x y width height content)
+  "Show child frame at X/Y with WIDTH/HEIGHT and CONTENT."
+  (let* ((window-min-height 1)
+         (window-min-width 1)
+         (after-make-frame-functions)
+         (edge (window-inside-pixel-edges))
+         (lh (line-pixel-height))
+         (x (max 0 (min (+ (car edge) x -1) (- (frame-pixel-width) width))))
+         (y (+ (cadr edge) y))
+	 (y (if (> (+ y height (* 3 lh)) (frame-pixel-height))
+		(- y height 1)
+              (+ y lh)))
+         (buffer (get-buffer-create " *corfu*")))
+    (with-current-buffer buffer
+      (setq-local mode-line-format nil
+                  header-line-format nil
+                  frame-title-format ""
+                  truncate-lines t
+                  cursor-type nil
+                  cursor-in-non-selected-windows nil
+                  show-trailing-whitespace nil
+                  display-line-numbers nil
+                  left-fringe-width nil
+                  right-fringe-width nil
+                  left-margin-width nil
+                  right-margin-width nil
+                  fringes-outside-margins 0)
+      (let (inhibit-modification-hooks)
+        (erase-buffer)
+        (insert content)
+        (goto-char (point-min))))
+    (unless (and (frame-live-p corfu--frame)
+                 (eq (frame-parent corfu--frame) (window-frame)))
+      (when corfu--frame
+        (delete-frame corfu--frame))
+      (setq corfu--frame
+            (make-frame
+             `((parent-frame . ,(window-frame))
+               (no-accept-focus . t)
+               (min-width . t)
+               (min-height . t)
+               (width . 0)
+               (height . 0)
+               (line-spacing . 0)
+               (border-width . 0)
+               (internal-border-width . 1)
+               (left-fringe . 0)
+               (right-fringe . 0)
+               (vertical-scroll-bars . nil)
+               (horizontal-scroll-bars . nil)
+               (menu-bar-lines . 0)
+               (tool-bar-lines . 0)
+               (tab-bar-lines . 0)
+               (no-other-frame . t)
+               (unsplittable . t)
+               (undecorated . t)
+               (cursor-type . nil)
+               (minibuffer . nil)
+               (visibility . nil)
+               (no-special-glyphs . t)))))
+    (set-face-background 'internal-border (face-attribute 'corfu-border :background) corfu--frame)
+    (set-frame-parameter corfu--frame 'background-color (face-attribute 'corfu-background :background))
+    (set-window-buffer (frame-root-window corfu--frame) buffer)
+    (set-frame-position corfu--frame x y)
+    (set-frame-size corfu--frame width height t)
+    (make-frame-visible corfu--frame)))
 
 (defun corfu--popup (pos lines &optional curr lo bar)
   "Show LINES as popup at POS, with CURR highlighted and scrollbar from LO to LO+BAR."
-  (save-excursion
-    (goto-char pos)
-    (let* ((inhibit-field-text-motion t) ;; ignore field boundaries (shell-mode!)
-           (size (corfu--char-size))
-           ;; XXX Deactivate fancy border on terminal or if line-spacing is used
-           (fancy (and (not line-spacing) (display-graphic-p)))
-           (lborder-curr (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-current))
-           (rborder-curr (corfu--border (car size) (cdr size) -1 'corfu-border 'corfu-current))
-           (rbar-curr (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
-                                     'corfu-bar 'corfu-current))
-           (lborder (corfu--border (car size) (cdr size) 1 'corfu-border 'corfu-background))
-           (rborder (corfu--border (car size) (cdr size) -1 'corfu-border 'corfu-background))
-           (rbar (corfu--border (car size) (cdr size) (- (ceiling (car size) 3))
-                                'corfu-bar 'corfu-background))
-           (max-width (min (cdr corfu-width-limits) (/ (window-total-width) 2)))
-           (col (- pos (line-beginning-position)))
-           (rest-width (- (window-total-width) col 4))
-           (ypos (- (line-number-at-pos)
-                    (save-excursion (move-to-window-line 0) (line-number-at-pos))))
-           (count (length lines))
-           (row 0) (width) (formatted) (beg))
-      (if (< rest-width (car corfu-width-limits))
-          (setq lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
-                width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))
-                col (max 0 (- col width 2)))
-        (setq max-width (min rest-width max-width)
-              lines (mapcar (lambda (x) (truncate-string-to-width x max-width)) lines)
-              width (apply #'max (car corfu-width-limits) (mapcar #'string-width lines))))
-      (beginning-of-line)
-      (forward-line (if (and (< count ypos)
-                             (>= count (- (floor (window-pixel-height) (cdr size)) ypos 2)))
-                        (- count) 1))
-      (setq beg (point))
-      (when (save-excursion
-              (forward-line 1)
-              (/= (point) (line-beginning-position)))
-        (push #(" \n" 0 1 (cursor t)) formatted))
-      (dolist (line lines)
-        (let ((bufline (buffer-substring (point) (line-end-position)))
-              (str (concat
-                    (if fancy (if (eq row curr) lborder-curr lborder) " ")
-                    line
-                    (make-string (- width (string-width line)) 32)
-                    (cond
-                     (fancy (if (and lo (<= lo row (+ lo bar)))
-                                (if (eq row curr) rbar-curr rbar)
-                              (if (eq row curr) rborder-curr rborder)))
-                     (lo (propertize " " 'face (if (<= lo row (+ lo bar))
-                                                   'corfu-bar 'corfu-border)))
-                     (t " ")))))
-          (add-face-text-property 0 (length str) (if (eq row curr) 'corfu-current 'corfu-background) 'append str)
-          (push (concat
-                 (truncate-string-to-width bufline col 0 32) str
-                 (substring bufline (length (truncate-string-to-width bufline (+ col width 2))))
-                 "\n")
-                formatted)
-          (setq row (1+ row))
-          (forward-line 1)))
-      (let ((ov (make-overlay beg (point))))
-        (overlay-put ov 'priority 900)
-        (overlay-put ov 'window (selected-window))
-        (overlay-put ov 'invisible t)
-        (overlay-put ov 'before-string (string-join (nreverse formatted)))
-        (push ov corfu--overlays)))))
+  (let* ((cw (frame-char-width))
+         (ch (frame-char-height))
+         (mw (ceiling cw 1.6))
+         (margin (propertize " " 'display `(space :width (,mw))))
+         (align (propertize " " 'display `(space :align-to (- right (,(ceiling cw 4))))))
+         (sbar (propertize " " 'face 'corfu-bar 'display `(space :width (,(ceiling cw 4)))))
+         (width (min (cdr corfu-width-limits)
+                     (/ (frame-width) 2)
+                     (apply #'max (car corfu-width-limits)
+                            (mapcar #'string-width lines))))
+         (row 0)
+         (pos (posn-x-y (posn-at-point pos))))
+    (corfu--child-frame
+     (- (or (car pos) 0) mw) (or (cdr pos) 0)
+     (+ (* width cw) mw mw) (* (length lines) ch)
+     (mapconcat (lambda (line)
+                  (let ((str (concat
+                              margin
+                              (truncate-string-to-width line width)
+                              align
+                              (if (and lo (<= lo row (+ lo bar)))
+                                  sbar margin))))
+                    (when (eq row curr)
+                      (add-face-text-property
+                       0 (length str) 'corfu-current 'append str))
+                    (setq row (1+ row))
+                    str))
+                lines "\n"))))
 
 (defun corfu--move-to-front (elem list)
   "Move ELEM to front of LIST."
@@ -356,13 +366,6 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   (and (symbolp this-command)
        (string-match-p corfu--keep-alive (symbol-name this-command))))
 
-(defun corfu--pre-command-hook ()
-  "Delete overlays."
-  (mapc #'delete-overlay corfu--overlays)
-  (setq corfu--overlays nil)
-  (unless (or (< corfu--index 0) (corfu--keep-alive-p))
-    (corfu--insert 'exact)))
-
 (defun corfu-abort ()
   "Abort Corfu completion."
   (interactive)
@@ -404,11 +407,10 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
          (cands (funcall corfu--highlight (seq-subseq corfu--candidates start last)))
          (ann-cands (mapcar #'corfu--format-candidate (corfu--annotate metadata cands))))
     (when (>= curr 0)
-      (let ((ov (make-overlay beg end nil t t)))
-        (overlay-put ov 'priority 1000)
-        (overlay-put ov 'window (selected-window))
-        (overlay-put ov 'display (concat (substring str 0 corfu--base) (nth curr cands)))
-        (push ov corfu--overlays)))
+      (setq corfu--overlay (make-overlay beg end nil t t))
+      (overlay-put corfu--overlay 'priority 1000)
+      (overlay-put corfu--overlay 'window (selected-window))
+      (overlay-put corfu--overlay 'display (concat (substring str 0 corfu--base) (nth curr cands))))
     ;; Nonlinearity at the end and the beginning
     (when (/= start 0)
       (setq lo (max 1 lo)))
@@ -431,32 +433,48 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
      ((condition-case err
           (unless (equal corfu--input (cons str pt))
             (and (corfu--update-candidates str metadata pt table pred)) nil)
-        (t (message "%s" (error-message-string err)))))
+        (t (message "%s" (error-message-string err))
+           nil)))
      ((and (not corfu--candidates)                    ;; 1) There are no candidates
            initializing)                              ;; &  Initializing, first retrieval of candidates.
-      (minibuffer-message "No match"))                ;; => Show error message
-     ((and (not corfu--candidates)                    ;; 2) There are no candidates
-           corfu-confirm)                             ;; &  Confirmation is enabled
-      (corfu--popup beg (list corfu-confirm)))        ;; => Show confirmation popup
-     ((and corfu--candidates                          ;; 3) There exist candidates
+      (minibuffer-message "No match")                 ;; => Show error message
+      nil)
+     ((and corfu--candidates                          ;; 2) There exist candidates
            (not (equal corfu--candidates (list str))) ;; &  Not a sole exactly matching candidate
            (or (/= beg end) (corfu--keep-alive-p)))   ;; &  Input is non-empty or keep-alive command
-      (corfu--show-candidates beg end str metadata))  ;; => Show candidates popup
-     ;; When after `completion-at-point/corfu-complete', no further completion is possible and the
+      (corfu--show-candidates beg end str metadata)   ;; => Show candidates popup
+      t)
+     ;; 3) When after `completion-at-point/corfu-complete', no further completion is possible and the
      ;; current string is a valid match, exit with status 'finished.
      ((and (memq this-command '(corfu-complete completion-at-point))
            (not (stringp (try-completion str table pred)))
            (test-completion str table pred))
-      (corfu--done str 'finished)))))
+      (corfu--done str 'finished)
+      nil)
+     ((and (not corfu--candidates)                    ;; 4) There are no candidates
+           corfu-no-match)                            ;; &  Confirmation is enabled
+      (corfu--popup beg (list corfu-no-match))        ;; => Show confirmation popup
+      t))))
+
+(defun corfu--pre-command-hook ()
+  "Insert selected candidate unless keep alive command."
+  (when corfu--overlay
+    (delete-overlay corfu--overlay)
+    (setq corfu--overlay nil))
+  (unless (or (< corfu--index 0) (corfu--keep-alive-p))
+    (corfu--insert 'exact)))
+
+(defun corfu--window-change-hook ()
+  "Terminate completion when window configuration changed."
+  (completion-in-region-mode -1))
 
 (defun corfu--post-command-hook ()
   "Refresh Corfu after last command."
-  (pcase completion-in-region--data
-    (`(,beg ,end ,_table ,_pred)
-     (when (and (eq (marker-buffer beg) (current-buffer)) (<= beg (point) end))
-       (corfu--update))))
-  (unless corfu--overlays
-    (completion-in-region-mode -1)))
+  (or (pcase completion-in-region--data
+        (`(,beg ,end ,_table ,_pred)
+         (when (and (eq (marker-buffer beg) (current-buffer)) (<= beg (point) end))
+           (corfu--update))))
+      (completion-in-region-mode -1)))
 
 (defun corfu--goto (index)
   "Go to candidate with INDEX."
@@ -503,12 +521,18 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   (let ((config (current-window-configuration))
         (other other-window-scroll-buffer)
         (restore (make-symbol "corfu--restore")))
-    (fset restore (lambda ()
-                    (when (eq this-command #'corfu-abort)
-                      (setq this-command #'ignore))
-                    (remove-hook 'pre-command-hook restore)
-                    (setq other-window-scroll-buffer other)
-                    (set-window-configuration config)))
+    (remove-hook 'window-configuration-change-hook
+                 #'corfu--window-change-hook 'local)
+    (fset restore
+          (lambda ()
+            (when (eq this-command #'corfu-abort)
+              (setq this-command #'ignore))
+            (remove-hook 'pre-command-hook restore)
+            (setq other-window-scroll-buffer other)
+            (set-window-configuration config)
+            (redisplay) ;; force configuration change
+            (add-hook 'window-configuration-change-hook
+                      #'corfu--window-change-hook nil 'local)))
     (add-hook 'pre-command-hook restore)))
 
 ;; Company support, taken from `company.el', see `company-show-doc-buffer'.
@@ -599,14 +623,20 @@ If `line-spacing/=nil' or in text-mode, the background color is used instead.")
   "Setup Corfu completion state."
   (setq corfu--extra-properties completion-extra-properties)
   (setcdr (assq #'completion-in-region-mode minor-mode-overriding-map-alist) corfu-map)
+  (add-hook 'window-configuration-change-hook #'corfu--window-change-hook nil 'local)
   (add-hook 'pre-command-hook #'corfu--pre-command-hook nil 'local)
   (add-hook 'post-command-hook #'corfu--post-command-hook nil 'local))
 
 (defun corfu--teardown ()
   "Teardown Corfu."
+  (remove-hook 'window-configuration-change-hook #'corfu--window-change-hook 'local)
   (remove-hook 'pre-command-hook #'corfu--pre-command-hook 'local)
   (remove-hook 'post-command-hook #'corfu--post-command-hook 'local)
-  (mapc #'delete-overlay corfu--overlays)
+  (when corfu--overlay (delete-overlay corfu--overlay))
+  (when (frame-live-p corfu--frame)
+    (make-frame-invisible corfu--frame)
+    (with-current-buffer (window-buffer (frame-root-window corfu--frame))
+      (erase-buffer)))
   (mapc #'kill-local-variable corfu--state-vars))
 
 (defun corfu--mode-hook ()
