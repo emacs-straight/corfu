@@ -47,10 +47,13 @@
   "Maximal number of candidates to show."
   :type 'integer)
 
-(defcustom corfu-width-limits
-  (cons 15 80)
-  "Popup width limits."
-  :type '(cons integer integer))
+(defcustom corfu-min-width 15
+  "Popup minimum width in characters."
+  :type 'integer)
+
+(defcustom corfu-max-width 100
+  "Popup maximum width in characters."
+  :type 'integer)
 
 (defcustom corfu-cycle nil
   "Enable cycling for `corfu-next' and `corfu-previous'."
@@ -64,6 +67,14 @@ Set to nil in order to disable confirmation."
 (defcustom corfu-excluded-modes nil
   "List of modes excluded by `corfu-global-mode'."
   :type '(repeat symbol))
+
+(defcustom corfu-margin-width 0.6
+  "Width of the margin in units of the character width."
+  :type 'float)
+
+(defcustom corfu-bar-width 0.25
+  "Width of the bar in units of the character width."
+  :type 'float)
 
 (defgroup corfu-faces nil
   "Faces used by Corfu."
@@ -172,10 +183,10 @@ Set to nil in order to disable confirmation."
          (edge (window-inside-pixel-edges))
          (lh (line-pixel-height))
          (x (max 0 (min (+ (car edge) x -1) (- (frame-pixel-width) width))))
-         (y (+ (cadr edge) y))
-	 (y (if (> (+ y height (* 3 lh)) (frame-pixel-height))
-		(- y height 1)
-              (+ y lh)))
+         (yb (+ (cadr edge) y lh))
+	 (y (if (> (+ yb height lh lh) (frame-pixel-height))
+		(- yb height lh 1)
+              yb))
          (buffer (get-buffer-create " *corfu*")))
     (with-current-buffer buffer
       (setq-local mode-line-format nil
@@ -210,6 +221,7 @@ Set to nil in order to disable confirmation."
                (line-spacing . 0)
                (border-width . 0)
                (internal-border-width . 1)
+               (child-frame-border-width . 1)
                (left-fringe . 0)
                (right-fringe . 0)
                (vertical-scroll-bars . nil)
@@ -224,24 +236,35 @@ Set to nil in order to disable confirmation."
                (minibuffer . nil)
                (visibility . nil)
                (no-special-glyphs . t)))))
-    (set-face-background 'internal-border (face-attribute 'corfu-border :background) corfu--frame)
-    (set-frame-parameter corfu--frame 'background-color (face-attribute 'corfu-background :background))
+    (set-face-background
+     (if (facep 'child-frame-border) 'child-frame-border 'internal-border)
+     (face-attribute 'corfu-border :background) corfu--frame)
+    (set-frame-parameter
+     corfu--frame 'background-color
+     (face-attribute 'corfu-background :background))
     (set-window-buffer (frame-root-window corfu--frame) buffer)
-    (set-frame-position corfu--frame x y)
+    ;; XXX Make the frame invisible before moving the popup from above to below
+    ;; the line in order to avoid flicker.
+    (unless (eq (< (cdr (frame-position corfu--frame)) yb) (< y yb))
+      (make-frame-invisible corfu--frame))
     (set-frame-size corfu--frame width height t)
+    (set-frame-position corfu--frame x y)
     (make-frame-visible corfu--frame)))
 
 (defun corfu--popup-show (pos lines &optional curr lo bar)
   "Show LINES as popup at POS, with CURR highlighted and scrollbar from LO to LO+BAR."
   (let* ((cw (frame-char-width))
          (ch (frame-char-height))
-         (mw (ceiling cw 1.6))
+         (mw (ceiling (* cw corfu-margin-width)))
+         (bw (ceiling (* cw (min corfu-margin-width corfu-bar-width))))
          (margin (propertize " " 'display `(space :width (,mw))))
-         (align (propertize " " 'display `(space :align-to (- right (,(ceiling cw 4))))))
-         (sbar (propertize " " 'face 'corfu-bar 'display `(space :width (,(ceiling cw 4)))))
-         (width (min (cdr corfu-width-limits)
+         (align (propertize " " 'display `(space :align-to (- right (,mw)))))
+         (sbar (concat
+                (propertize " " 'display `(space :width (,(- mw bw))))
+                (propertize " " 'face 'corfu-bar 'display `(space :width (,bw)))))
+         (width (min corfu-max-width
                      (/ (frame-width) 2)
-                     (apply #'max (car corfu-width-limits)
+                     (apply #'max corfu-min-width
                             (mapcar #'string-width lines))))
          (row 0)
          (pos (posn-x-y (posn-at-point pos))))
@@ -641,6 +664,10 @@ Set to nil in order to disable confirmation."
 
 (defun corfu--completion-in-region (&rest args)
   "Corfu completion in region function passing ARGS to `completion--in-region'."
+  ;; Prevent restarting the completion. This can happen for example if C-M-/
+  ;; (`dabbrev-completion') is pressed while the Corfu popup is already open.
+  (when completion-in-region-mode
+    (user-error "Completion is already in progress"))
   (let ((completion-show-inline-help)
         (completion-auto-help)
         ;; XXX Disable original predicate check, keep completion alive when
@@ -656,8 +683,10 @@ Set to nil in order to disable confirmation."
   (remove-hook 'completion-in-region-mode-hook #'corfu--mode-hook 'local)
   (kill-local-variable 'completion-in-region-function)
   (when corfu-mode
-    (add-hook 'completion-in-region-mode-hook #'corfu--mode-hook nil 'local)
-    (setq-local completion-in-region-function #'corfu--completion-in-region)))
+    (if (or emacs-basic-display (not (display-graphic-p)))
+        (message "Corfu mode is only compatible with the graphics display.")
+      (add-hook 'completion-in-region-mode-hook #'corfu--mode-hook nil 'local)
+      (setq-local completion-in-region-function #'corfu--completion-in-region))))
 
 ;;;###autoload
 (define-globalized-minor-mode corfu-global-mode corfu-mode corfu--on)
