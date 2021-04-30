@@ -179,6 +179,18 @@ Set to nil in order to disable confirmation."
   "Show child frame at X/Y with WIDTH/HEIGHT and CONTENT."
   (let* ((window-min-height 1)
          (window-min-width 1)
+         (x-gtk-resize-child-frames
+          (let ((case-fold-search t))
+            (and
+             ;; XXX Hack to fix resizing on gtk3/gnome taken from posframe.el
+             ;; More information:
+             ;; * https://github.com/minad/corfu/issues/17
+             ;; * https://gitlab.gnome.org/GNOME/mutter/-/issues/840
+             ;; * https://lists.gnu.org/archive/html/emacs-devel/2020-02/msg00001.html
+             (string-match-p "gtk3" system-configuration-features)
+             (string-match-p "gnome\\|cinnamon" (or (getenv "XDG_CURRENT_DESKTOP")
+                                                    (getenv "DESKTOP_SESSION") ""))
+             'resize-mode)))
          (after-make-frame-functions)
          (edge (window-inside-pixel-edges))
          (lh (line-pixel-height))
@@ -418,14 +430,19 @@ Set to nil in order to disable confirmation."
   "Return PROP from METADATA."
   (cdr (assq prop metadata)))
 
-(defun corfu--format-candidate (cand)
-  "Format annotated CAND string."
-  (if (consp cand)
-      (concat (cadr cand) (car cand)
-              (if (text-property-not-all 0 (length (caddr cand)) 'face nil (caddr cand))
-                  (caddr cand)
-                (propertize (caddr cand) 'face 'completions-annotations)))
-    cand))
+(defun corfu--format-candidate ()
+  "Format candidates."
+  (let ((mw (ceiling (* corfu-margin-width (frame-char-width)))))
+    (lambda (c)
+      (if (consp c)
+          (concat
+           (cadr c) (car c)
+           (propertize " " 'display
+                       `(space :align-to (- right ,(length (caddr c)) (,mw))))
+           (if (text-property-not-all 0 (length (caddr c)) 'face nil (caddr c))
+               (caddr c)
+             (propertize (caddr c) 'face 'completions-annotations)))
+        c))))
 
 (defun corfu--show-candidates (beg end str metadata)
   "Update display given BEG, END, STR and METADATA."
@@ -436,9 +453,11 @@ Set to nil in order to disable confirmation."
          (bar (ceiling (* corfu-count corfu-count) corfu--total))
          (lo (min (- corfu-count bar 1) (floor (* corfu-count start) corfu--total)))
          (cands (funcall corfu--highlight (seq-subseq corfu--candidates start last)))
-         (ann-cands (mapcar #'corfu--format-candidate (corfu--annotate metadata cands))))
+         (ann-cands (mapcar (corfu--format-candidate) (corfu--annotate metadata cands))))
+    (when corfu--overlay
+      (delete-overlay corfu--overlay)
+      (setq corfu--overlay nil))
     (when (>= curr 0)
-      (when corfu--overlay (delete-overlay corfu--overlay))
       (setq corfu--overlay (make-overlay beg end nil t t))
       (overlay-put corfu--overlay 'priority 1000)
       (overlay-put corfu--overlay 'window (selected-window))
