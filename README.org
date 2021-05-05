@@ -140,12 +140,12 @@ This package is experimental and new. There are a few known technical caveats.
 - The ~completion-in-region-mode-predicate~ is ignored in order to
   give the completion style full control. The predicate asks the backend if
   the starting point of the completion has changed.
-- Company kind icons and metadata are not supported (~company-kind~, ~company-docsig~)
+- Company kind icons, docsig and match data are not supported (~company-kind~, ~company-docsig~, ~company-match~)
 - No support for multi-backends like Company (Implement a multi-capf?).
 - No sorting by history, since ~completion-at-point~ does not
   maintain a history (See branch =history= for a possible solution).
 
 * Contributions
 
-Since this package is part of GNU ELPA, contributions require copyright
+Since this package is part of [[http://elpa.gnu.org/packages/corfu.html][GNU ELPA]] contributions require a copyright
 assignment to the FSF.
