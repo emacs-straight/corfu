@@ -174,12 +174,36 @@ Set to nil in order to disable confirmation."
     corfu--extra-properties)
   "Buffer-local state variables used by Corfu.")
 
+(defvar corfu--frame-parameters
+  '((no-accept-focus . t)
+    (min-width . t)
+    (min-height . t)
+    (width . 0)
+    (height . 0)
+    (border-width . 0)
+    (child-frame-border-width . 1)
+    (left-fringe . 0)
+    (right-fringe . 0)
+    (vertical-scroll-bars . nil)
+    (horizontal-scroll-bars . nil)
+    (menu-bar-lines . 0)
+    (tool-bar-lines . 0)
+    (tab-bar-lines . 0)
+    (no-other-frame . t)
+    (unsplittable . t)
+    (undecorated . t)
+    (cursor-type . nil)
+    (minibuffer . nil)
+    (visibility . nil)
+    (no-special-glyphs . t)
+    (desktop-dont-save . t))
+  "Default child frame parameters.")
+
 ;; Function adapted from posframe.el by tumashu
-(defun corfu--child-frame (x y width height content)
+(defun corfu--make-frame (x y width height content)
   "Show child frame at X/Y with WIDTH/HEIGHT and CONTENT."
   (let* ((window-min-height 1)
          (window-min-width 1)
-         (ls line-spacing)
          (x-gtk-resize-child-frames
           (let ((case-fold-search t))
             (and
@@ -194,8 +218,11 @@ Set to nil in order to disable confirmation."
              'resize-mode)))
          (after-make-frame-functions)
          (edge (window-inside-pixel-edges))
+         (fr face-remapping-alist)
          (lh (default-line-height))
-         (x (max 0 (min (+ (car edge) x -1) (- (frame-pixel-width) width))))
+         (x (max 0 (min (+ (car edge) x
+                           (- (alist-get 'child-frame-border-width corfu--frame-parameters)))
+                        (- (frame-pixel-width) width))))
          (yb (+ (cadr edge) y lh))
 	 (y (if (> (+ yb height lh lh) (frame-pixel-height))
 		(- yb height lh 1)
@@ -214,41 +241,22 @@ Set to nil in order to disable confirmation."
                   right-fringe-width nil
                   left-margin-width nil
                   right-margin-width nil
-                  fringes-outside-margins 0)
+                  fringes-outside-margins 0
+                  face-remapping-alist fr)
       (let (inhibit-modification-hooks)
         (erase-buffer)
         (insert content)
         (goto-char (point-min))))
     (unless (and (frame-live-p corfu--frame)
                  (eq (frame-parent corfu--frame) (window-frame)))
-      (when corfu--frame
-        (delete-frame corfu--frame))
-      (setq corfu--frame
-            (make-frame
-             `((parent-frame . ,(window-frame))
-               (no-accept-focus . t)
-               (min-width . t)
-               (min-height . t)
-               (width . 0)
-               (height . 0)
-               (line-spacing . ,ls)
-               (border-width . 0)
-               (internal-border-width . 1)
-               (child-frame-border-width . 1)
-               (left-fringe . 0)
-               (right-fringe . 0)
-               (vertical-scroll-bars . nil)
-               (horizontal-scroll-bars . nil)
-               (menu-bar-lines . 0)
-               (tool-bar-lines . 0)
-               (tab-bar-lines . 0)
-               (no-other-frame . t)
-               (unsplittable . t)
-               (undecorated . t)
-               (cursor-type . nil)
-               (minibuffer . nil)
-               (visibility . nil)
-               (no-special-glyphs . t)))))
+      (when corfu--frame (delete-frame corfu--frame))
+      (setq corfu--frame (make-frame
+                          `((parent-frame . ,(window-frame))
+                            (line-spacing . ,line-spacing)
+                            ;; Set `internal-border-width' for Emacs 27
+                            (internal-border-width
+                             . ,(alist-get 'child-frame-border-width corfu--frame-parameters))
+                            ,@corfu--frame-parameters))))
     (set-face-background
      (if (facep 'child-frame-border) 'child-frame-border 'internal-border)
      (face-attribute 'corfu-border :background) corfu--frame)
@@ -266,8 +274,8 @@ Set to nil in order to disable confirmation."
 
 (defun corfu--popup-show (pos lines &optional curr lo bar)
   "Show LINES as popup at POS, with CURR highlighted and scrollbar from LO to LO+BAR."
-  (let* ((cw (frame-char-width))
-         (ch (default-line-height))
+  (let* ((ch (default-line-height))
+         (cw (round (* ch (frame-char-width)) (frame-char-height)))
          (mw (ceiling (* cw corfu-margin-width)))
          (bw (ceiling (* cw (min corfu-margin-width corfu-bar-width))))
          (margin (propertize " " 'display `(space :width (,mw))))
@@ -281,7 +289,7 @@ Set to nil in order to disable confirmation."
                             (mapcar #'string-width lines))))
          (row 0)
          (pos (posn-x-y (posn-at-point pos))))
-    (corfu--child-frame
+    (corfu--make-frame
      (- (or (car pos) 0) mw) (or (cdr pos) 0)
      (+ (* width cw) mw mw) (* (length lines) ch)
      (mapconcat (lambda (line)
