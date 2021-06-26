@@ -58,17 +58,15 @@
   "Enable cycling for `corfu-next' and `corfu-previous'."
   :type 'boolean)
 
-(defcustom corfu-respect-boundary nil
-  "Respect completion field boundaries.
-If this variable is nil, Orderless filtering is facilitated since a filter
-string with spaces is allowed. Otherwise the completion is terminated at the
-word boundary."
+(defcustom corfu-quit-at-boundary nil
+  "Automatically quit at completion field/word boundary.
+If automatic quitting is disabled, Orderless filtering is facilitated since a
+filter string with spaces is allowed."
   :type 'boolean)
 
-(defcustom corfu-no-match (propertize "No match" 'face 'italic)
-  "Show this confirmation string if there is no match.
-Set to nil in order to disable confirmation."
-  :type '(choice (const nil) string))
+(defcustom corfu-quit-no-match nil
+  "Automatically quit if no matching candidate is found."
+  :type 'boolean)
 
 (defcustom corfu-excluded-modes nil
   "List of modes excluded by `corfu-global-mode'."
@@ -128,8 +126,8 @@ Set to nil in order to disable confirmation."
     (define-key map [remap completion-at-point] #'corfu-complete)
     (define-key map "\en" #'corfu-next)
     (define-key map "\ep" #'corfu-previous)
-    (define-key map "\e\e\e" #'corfu-abort)
-    (define-key map "\C-g" #'corfu-abort)
+    (define-key map "\e\e\e" #'corfu-quit)
+    (define-key map "\C-g" #'corfu-quit)
     (define-key map "\r" #'corfu-insert)
     (define-key map "\t" #'corfu-complete)
     (define-key map "\eg" #'corfu-show-location)
@@ -164,10 +162,10 @@ Set to nil in order to disable confirmation."
 (defvar corfu--frame nil
   "Popup frame.")
 
-(defvar corfu--keep-alive
+(defvar corfu--continue-commands
   ;; nil is undefined command
   "\\`\\(nil\\|completion-at-point\\|corfu-.*\\|scroll-other-window.*\\)\\'"
-  "Keep Corfu popup alive during commands matching this regexp.")
+  "Continue Corfu completion after executing commands matching this regexp.")
 
 (defconst corfu--state-vars
   '(corfu--base
@@ -422,13 +420,13 @@ Set to nil in order to disable confirmation."
            corfu--total total
            corfu--highlight hl))))
 
-(defun corfu--keep-alive-p ()
+(defun corfu--continue-p ()
   "Return t if the Corfu popup should stay alive."
   (and (symbolp this-command)
-       (string-match-p corfu--keep-alive (symbol-name this-command))))
+       (string-match-p corfu--continue-commands (symbol-name this-command))))
 
-(defun corfu-abort ()
-  "Abort Corfu completion."
+(defun corfu-quit ()
+  "Quit Corfu completion."
   (interactive)
   (completion-in-region-mode -1))
 
@@ -512,7 +510,7 @@ Set to nil in order to disable confirmation."
       nil)
      ((and corfu--candidates                          ;; 2) There exist candidates
            (not (equal corfu--candidates (list str))) ;; &  Not a sole exactly matching candidate
-           (or (/= beg end) (corfu--keep-alive-p)))   ;; &  Input is non-empty or keep-alive command
+           (or (/= beg end) (corfu--continue-p)))     ;; &  Input is non-empty or keep-alive command
       (corfu--show-candidates beg end str metadata)   ;; => Show candidates popup
       t)
      ;; 3) When after `completion-at-point/corfu-complete', no further completion is possible and the
@@ -525,15 +523,14 @@ Set to nil in order to disable confirmation."
            (test-completion str table pred))
       (corfu--done str 'finished)
       nil)
-     ((and (not corfu--candidates)                    ;; 4) There are no candidates
-           corfu-no-match)                            ;; &  Confirmation is enabled
-      (corfu--popup-show beg (list corfu-no-match))   ;; => Show confirmation popup
+     ((not (or corfu--candidates corfu-quit-no-match))           ;; 4) There are no candidates
+      (corfu--popup-show beg '(#("No match" 0 8 (face italic)))) ;; => Show confirmation popup
       t))))
 
 (defun corfu--pre-command ()
-  "Insert selected candidate unless keep alive command."
+  "Insert selected candidate unless command is marked to continue completion."
   (add-hook 'window-configuration-change-hook #'corfu--popup-hide)
-  (unless (or (< corfu--index 0) (corfu--keep-alive-p))
+  (unless (or (< corfu--index 0) (corfu--continue-p))
     (corfu--insert 'exact)))
 
 (defun corfu--post-command ()
@@ -543,7 +540,7 @@ Set to nil in order to disable confirmation."
         (`(,beg ,end ,_table ,_pred)
          (when (and (eq (marker-buffer beg) (current-buffer)) (<= beg (point) end))
            (corfu--update))))
-      (corfu-abort)))
+      (corfu-quit)))
 
 (defun corfu--goto (index)
   "Go to candidate with INDEX."
@@ -592,7 +589,7 @@ Set to nil in order to disable confirmation."
         (restore (make-symbol "corfu--restore")))
     (fset restore
           (lambda ()
-            (when (eq this-command #'corfu-abort)
+            (when (eq this-command #'corfu-quit)
               (setq this-command #'ignore))
             (remove-hook 'pre-command-hook restore)
             (setq other-window-scroll-buffer other)
@@ -674,14 +671,14 @@ Set to nil in order to disable confirmation."
   ;; XXX Is the :exit-function handling sufficient?
   (when-let (exit (plist-get corfu--extra-properties :exit-function))
     (funcall exit str status))
-  (corfu-abort))
+  (corfu-quit))
 
 (defun corfu-insert ()
   "Insert current candidate."
   (interactive)
   (if (> corfu--total 0)
       (corfu--insert 'finished)
-    (corfu-abort)))
+    (corfu-quit)))
 
 (defun corfu--setup ()
   "Setup Corfu completion state."
@@ -704,26 +701,25 @@ Set to nil in order to disable confirmation."
 
 (defun corfu--completion-in-region (&rest args)
   "Corfu completion in region function passing ARGS to `completion--in-region'."
-  (if (display-graphic-p)
-      ;; Prevent restarting the completion. This can happen for example if C-M-/
-      ;; (`dabbrev-completion') is pressed while the Corfu popup is already open.
-      (if (and completion-in-region-mode (not completion-cycling))
-          (user-error "Completion is already in progress")
-        (prog1
-            (let ((completion-show-inline-help)
-                  (completion-auto-help)
-                  ;; XXX Disable original predicate check, keep completion alive when
-                  ;; popup is shown. Since the predicate is set always, it is ensured
-                  ;; that `completion-in-region-mode' is turned on.
-                  (completion-in-region-mode-predicate
-                   (or (and corfu-respect-boundary
-                            completion-in-region-mode-predicate)
-                       (lambda () t))))
-              (apply #'completion--in-region args))
-          (corfu--setup)))
-    ;; XXX Warning this can result in an endless loop when `completion-in-region-function'
-    ;; is set *globally* to `corfu--completion-in-region'. This should never happen.
-    (apply (default-value 'completion-in-region-function) args)))
+  (if (not (display-graphic-p))
+      ;; XXX Warning this can result in an endless loop when `completion-in-region-function'
+      ;; is set *globally* to `corfu--completion-in-region'. This should never happen.
+      (apply (default-value 'completion-in-region-function) args)
+    ;; Prevent restarting the completion. This can happen for example if C-M-/
+    ;; (`dabbrev-completion') is pressed while the Corfu popup is already open.
+    (when (and completion-in-region-mode (not completion-cycling))
+      (user-error "Completion is already in progress"))
+    (let ((completion-show-inline-help)
+          (completion-auto-help)
+          ;; XXX Disable original predicate check, keep completion alive when
+          ;; popup is shown. Since the predicate is set always, it is ensured
+          ;; that `completion-in-region-mode' is turned on.
+          (completion-in-region-mode-predicate
+           (or (and corfu-quit-at-boundary
+                    completion-in-region-mode-predicate)
+               (lambda () t))))
+          (prog1 (apply #'completion--in-region args)
+            (corfu--setup)))))
 
 ;;;###autoload
 (define-minor-mode corfu-mode
