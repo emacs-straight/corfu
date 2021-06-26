@@ -80,6 +80,18 @@ filter string with spaces is allowed."
   "Width of the bar in units of the character width."
   :type 'float)
 
+(defcustom corfu-auto-prefix 3
+  "Minimum length of prefix for auto completion."
+  :type 'integer)
+
+(defcustom corfu-auto-delay 0.2
+  "Delay for auto completion."
+  :type 'float)
+
+(defcustom corfu-auto nil
+  "Enable auto completion."
+  :type 'boolean)
+
 (defgroup corfu-faces nil
   "Faces used by Corfu."
   :group 'corfu
@@ -119,11 +131,13 @@ filter string with spaces is allowed."
     (define-key map [remap end-of-buffer] #'corfu-last)
     (define-key map [remap scroll-down-command] #'corfu-scroll-down)
     (define-key map [remap scroll-up-command] #'corfu-scroll-up)
-    (define-key map [down] #'corfu-next)
-    (define-key map [up] #'corfu-previous)
     (define-key map [remap next-line] #'corfu-next)
     (define-key map [remap previous-line] #'corfu-previous)
     (define-key map [remap completion-at-point] #'corfu-complete)
+    (define-key map [down] #'corfu-next)
+    (define-key map [up] #'corfu-previous)
+    (define-key map [return] #'corfu-insert)
+    (define-key map [tab] #'corfu-complete)
     (define-key map "\en" #'corfu-next)
     (define-key map "\ep" #'corfu-previous)
     (define-key map "\e\e\e" #'corfu-quit)
@@ -134,6 +148,9 @@ filter string with spaces is allowed."
     (define-key map "\eh" #'corfu-show-documentation)
     map)
   "Corfu keymap used when popup is shown.")
+
+(defvar corfu--auto-timer nil
+  "Auto completion timer.")
 
 (defvar-local corfu--candidates nil
   "List of candidates.")
@@ -161,6 +178,10 @@ filter string with spaces is allowed."
 
 (defvar corfu--frame nil
   "Popup frame.")
+
+(defvar corfu--auto-commands
+  "\\`\\(.*self-insert-command\\)\\'"
+  "Commands which initiate auto completion.")
 
 (defvar corfu--continue-commands
   ;; nil is undefined command
@@ -328,9 +349,6 @@ filter string with spaces is allowed."
 
 ;; bug#47711: Deferred highlighting for `completion-all-completions'
 ;; XXX There is one complication: `completion--twq-all' already adds `completions-common-part'.
-(declare-function orderless-highlight-matches "ext:orderless")
-(declare-function orderless-pattern-compiler "ext:orderless")
-(require 'orderless nil 'noerror)
 (defun corfu--all-completions (&rest args)
   "Compute all completions for ARGS with deferred highlighting."
   (cl-letf* ((orig-pcm (symbol-function #'completion-pcm--hilit-commonality))
@@ -355,13 +373,16 @@ filter string with spaces is allowed."
                            (condition-case nil
                                (completion-pcm--hilit-commonality pattern x)
                              (t x))))
-                cands))
-             ((symbol-function #'orderless-highlight-matches)
-              (lambda (pattern cands)
-                (let ((regexps (orderless-pattern-compiler pattern)))
-                  (setq hl (lambda (x) (orderless-highlight-matches regexps x))))
                 cands)))
-    (cons (apply #'completion-all-completions args) hl)))
+    ;; Only advise orderless after it has been loaded to avoid load order issues
+    (if (and (fboundp 'orderless-highlight-matches) (fboundp 'orderless-pattern-compiler))
+        (cl-letf (((symbol-function 'orderless-highlight-matches)
+                   (lambda (pattern cands)
+                     (let ((regexps (orderless-pattern-compiler pattern)))
+                       (setq hl (lambda (x) (orderless-highlight-matches regexps x))))
+                     cands)))
+          (cons (apply #'completion-all-completions args) hl))
+      (cons (apply #'completion-all-completions args) hl))))
 
 (defun corfu--sort-predicate (x y)
   "Sorting predicate which compares X and Y."
@@ -484,8 +505,8 @@ filter string with spaces is allowed."
       (overlay-put corfu--overlay 'window (selected-window))
       (overlay-put corfu--overlay 'display (concat (substring str 0 corfu--base) (nth curr cands))))))
 
-(defun corfu--update ()
-  "Refresh Corfu UI."
+(defun corfu--update (msg)
+  "Refresh Corfu UI, possibly printing a message with MSG."
   (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
                (pt (- (point) beg))
                (str (buffer-substring-no-properties beg end))
@@ -501,16 +522,16 @@ filter string with spaces is allowed."
      ;; TODO Report this as a bug? Are completion tables supposed to throw errors?
      ((condition-case err
           (unless (equal corfu--input (cons str pt))
-            (and (corfu--update-candidates str metadata pt table pred)) nil)
+            (corfu--update-candidates str metadata pt table pred)
+            nil)
         (t (message "%s" (error-message-string err))
            nil)))
-     ((and (not corfu--candidates)                    ;; 1) There are no candidates
-           initializing)                              ;; &  Initializing, first retrieval of candidates.
-      (minibuffer-message "No match")                 ;; => Show error message
+     ((and initializing (not corfu--candidates))      ;; 1) Initializing, no candidates
+      (funcall msg "No match")                        ;; => Show error message
       nil)
      ((and corfu--candidates                          ;; 2) There exist candidates
            (not (equal corfu--candidates (list str))) ;; &  Not a sole exactly matching candidate
-           (or (/= beg end) (corfu--continue-p)))     ;; &  Input is non-empty or keep-alive command
+           (or (/= beg end) (corfu--continue-p)))     ;; &  Input is non-empty or continue command
       (corfu--show-candidates beg end str metadata)   ;; => Show candidates popup
       t)
      ;; 3) When after `completion-at-point/corfu-complete', no further completion is possible and the
@@ -539,7 +560,7 @@ filter string with spaces is allowed."
   (or (pcase completion-in-region--data
         (`(,beg ,end ,_table ,_pred)
          (when (and (eq (marker-buffer beg) (current-buffer)) (<= beg (point) end))
-           (corfu--update))))
+           (corfu--update #'minibuffer-message))))
       (corfu-quit)))
 
 (defun corfu--goto (index)
@@ -705,10 +726,10 @@ filter string with spaces is allowed."
       ;; XXX Warning this can result in an endless loop when `completion-in-region-function'
       ;; is set *globally* to `corfu--completion-in-region'. This should never happen.
       (apply (default-value 'completion-in-region-function) args)
-    ;; Prevent restarting the completion. This can happen for example if C-M-/
+    ;; Restart the completion. This can happen for example if C-M-/
     ;; (`dabbrev-completion') is pressed while the Corfu popup is already open.
     (when (and completion-in-region-mode (not completion-cycling))
-      (user-error "Completion is already in progress"))
+      (corfu-quit))
     (let ((completion-show-inline-help)
           (completion-auto-help)
           ;; XXX Disable original predicate check, keep completion alive when
@@ -718,15 +739,53 @@ filter string with spaces is allowed."
            (or (and corfu-quit-at-boundary
                     completion-in-region-mode-predicate)
                (lambda () t))))
-          (prog1 (apply #'completion--in-region args)
-            (corfu--setup)))))
+      (prog1 (apply #'completion--in-region args)
+        (corfu--setup)))))
+
+(defun corfu--auto-complete (buffer)
+  "Initiate auto completion after delay in BUFFER."
+  (setq corfu--auto-timer nil)
+  (when (and (not completion-in-region-mode)
+             (eq (current-buffer) buffer))
+    (pcase (run-hook-wrapped 'completion-at-point-functions
+                             #'completion--capf-wrapper 'all)
+      ((and `(,fun ,beg ,end ,table . ,plist) (guard (>= (- end beg) corfu-auto-prefix)))
+       (let ((completion-extra-properties plist)
+             (completion-in-region-mode-predicate
+              (if corfu-quit-at-boundary
+                 (lambda ()
+                   (when-let (newbeg (car-safe (funcall fun)))
+                     (= newbeg beg)))
+                (lambda () t))))
+         (setq completion-in-region--data `(,(copy-marker beg) ,(copy-marker end t)
+                                            ,table ,(plist-get plist :predicate)))
+         (completion-in-region-mode 1)
+         (corfu--setup)
+         (unless (corfu--update #'ignore)
+           (corfu-quit)))))))
+
+(defun corfu--auto-post-command ()
+  "Post command hook which initiates auto completion."
+  (when corfu--auto-timer
+    (cancel-timer corfu--auto-timer)
+    (setq corfu--auto-timer nil))
+  (when (and (not completion-in-region-mode)
+             (display-graphic-p)
+             (symbolp this-command)
+             (string-match-p corfu--auto-commands (symbol-name this-command)))
+    (setq corfu--auto-timer (run-with-idle-timer corfu-auto-delay nil
+                                                 #'corfu--auto-complete
+                                                 (current-buffer)))))
 
 ;;;###autoload
 (define-minor-mode corfu-mode
   "Completion Overlay Region FUnction"
   :global nil
   (if corfu-mode
-      (setq-local completion-in-region-function #'corfu--completion-in-region)
+      (progn
+        (and corfu-auto (add-hook 'post-command-hook #'corfu--auto-post-command nil 'local))
+        (setq-local completion-in-region-function #'corfu--completion-in-region))
+    (remove-hook 'post-command-hook #'corfu--auto-post-command 'local)
     (kill-local-variable 'completion-in-region-function)))
 
 ;;;###autoload
