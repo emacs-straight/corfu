@@ -239,8 +239,43 @@ filter string with spaces is allowed."
     (right-fringe-width . nil)
     (left-margin-width . 0)
     (right-margin-width . 0)
-    (fringes-outside-margins . 0))
+    (fringes-outside-margins . 0)
+    (buffer-read-only . t))
   "Default child frame buffer parameters.")
+
+(defvar corfu--mouse-ignore-map
+  (let ((map (make-sparse-keymap)))
+    (dolist (k '(mouse-1 down-mouse-1 drag-mouse-1 double-mouse-1 triple-mouse-1
+                 mouse-2 down-mouse-2 drag-mouse-2 double-mouse-2 triple-mouse-2
+                 mouse-3 down-mouse-3 drag-mouse-3 double-mouse-3 triple-mouse-3
+                 mouse-4 down-mouse-4 drag-mouse-4 double-mouse-4 triple-mouse-4
+                 mouse-5 down-mouse-5 drag-mouse-5 double-mouse-5 triple-mouse-5
+                 mouse-6 down-mouse-6 drag-mouse-6 double-mouse-6 triple-mouse-6
+                 mouse-7 down-mouse-7 drag-mouse-7 double-mouse-7 triple-mouse-7))
+      (define-key map (vector k) #'ignore))
+    map)
+  "Ignore all mouse clicks.")
+
+(defun corfu--popup-redirect-focus ()
+  "Redirect focus from popup."
+  (redirect-frame-focus corfu--frame (frame-parent corfu--frame)))
+
+(defun corfu--make-buffer (content)
+  "Create corfu buffer with CONTENT."
+  (let ((fr face-remapping-alist)
+        (buffer (get-buffer-create " *corfu*")))
+    (with-current-buffer buffer
+      (add-hook 'pre-command-hook #'corfu--popup-redirect-focus nil 'local)
+      (use-local-map corfu--mouse-ignore-map)
+      (dolist (var corfu--buffer-parameters)
+        (set (make-local-variable (car var)) (cdr var)))
+      (setq-local face-remapping-alist fr)
+      (let ((inhibit-modification-hooks t)
+            (inhibit-read-only t))
+        (erase-buffer)
+        (insert content)
+        (goto-char (point-min))))
+    buffer))
 
 ;; Function adapted from posframe.el by tumashu
 (defun corfu--make-frame (x y width height content)
@@ -261,7 +296,6 @@ filter string with spaces is allowed."
              'resize-mode)))
          (after-make-frame-functions)
          (edge (window-inside-pixel-edges))
-         (fr face-remapping-alist)
          (lh (default-line-height))
          (x (max 0 (min (+ (car edge) x
                            (- (alist-get 'child-frame-border-width corfu--frame-parameters)))
@@ -270,15 +304,7 @@ filter string with spaces is allowed."
          (y (if (> (+ yb height lh lh) (frame-pixel-height))
                 (- yb height lh 1)
               yb))
-         (buffer (get-buffer-create " *corfu*")))
-    (with-current-buffer buffer
-      (dolist (var corfu--buffer-parameters)
-        (set (make-local-variable (car var)) (cdr var)))
-      (setq-local face-remapping-alist fr)
-      (let ((inhibit-modification-hooks t))
-        (erase-buffer)
-        (insert content)
-        (goto-char (point-min))))
+         (buffer (corfu--make-buffer content)))
     (unless (and (frame-live-p corfu--frame)
                  (eq (frame-parent corfu--frame) (window-frame)))
       (when corfu--frame (delete-frame corfu--frame))
@@ -343,7 +369,8 @@ filter string with spaces is allowed."
   (when (frame-live-p corfu--frame)
     (make-frame-invisible corfu--frame)
     (with-current-buffer (window-buffer (frame-root-window corfu--frame))
-      (erase-buffer)))
+      (let ((inhibit-read-only t))
+        (erase-buffer))))
   (remove-hook 'window-configuration-change-hook #'corfu--popup-hide))
 
 (defun corfu--move-to-front (elem list)
