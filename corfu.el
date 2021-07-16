@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.9
+;; Version: 0.10
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -203,6 +203,7 @@ filter string with spaces is allowed."
 
 (defvar corfu--frame-parameters
   '((no-accept-focus . t)
+    (no-focus-on-map . t)
     (min-width . t)
     (min-height . t)
     (width . 0)
@@ -349,9 +350,16 @@ filter string with spaces is allowed."
                      (apply #'max corfu-min-width
                             (mapcar #'string-width lines))))
          (row 0)
-         (pos (posn-x-y (posn-at-point pos))))
+         ;;; XXX HACK On Emacs 28 y-coordinate position computation is wrong if
+         ;;; there exists a flymake underline overlay at that point. Therefore
+         ;;; compute the y-coordinate at the line beginning.
+         (x (or (car (posn-x-y (posn-at-point pos))) 0))
+         (y (save-excursion
+              (goto-char pos)
+              (beginning-of-line)
+              (or (cdr (posn-x-y (posn-at-point))) 0))))
     (corfu--make-frame
-     (- (or (car pos) 0) mw) (or (cdr pos) 0)
+     (- x mw) y
      (+ (* width cw) mw mw) (* (length lines) ch)
      (mapconcat (lambda (line)
                   (let ((str (concat
