@@ -319,12 +319,17 @@ filter string with spaces is allowed."
                             (internal-border-width
                              . ,(alist-get 'child-frame-border-width corfu--frame-parameters))
                             ,@corfu--frame-parameters))))
-    (set-face-background
-     (if (facep 'child-frame-border) 'child-frame-border 'internal-border)
-     (face-attribute 'corfu-border :background) corfu--frame)
-    (set-frame-parameter
-     corfu--frame 'background-color
-     (face-attribute 'corfu-background :background))
+    ;; XXX HACK Setting the same frame-parameter/face-background is not a nop (BUG!).
+    ;; Check explicitly before applying the setting.
+    ;; Without the check, the frame flickers on Mac.
+    ;; With the check, the inner frame sometimes does not get updated sometimes (BUG!).
+    (let ((new (face-attribute 'corfu-background :background)))
+      (unless (equal (frame-parameter corfu--frame 'background-color) new)
+	(set-frame-parameter corfu--frame 'background-color new)))
+    (let* ((face (if (facep 'child-frame-border) 'child-frame-border 'internal-border))
+	   (new (face-attribute 'corfu-border :background)))
+      (unless (equal (face-attribute face :background corfu--frame) new)
+	(set-face-background face new corfu--frame)))
     (set-window-buffer (frame-root-window corfu--frame) buffer)
     ;; XXX HACK Make the frame invisible before moving the popup from above to below the line in
     ;; order to avoid flicker.
