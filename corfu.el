@@ -59,6 +59,16 @@
   "Enable cycling for `corfu-next' and `corfu-previous'."
   :type 'boolean)
 
+(defcustom corfu-continue-commands
+  ;; nil is undefined command
+  '(nil completion-at-point "\\`corfu-" "\\`scroll-other-window")
+  "Continue Corfu completion after executing these commands."
+  :type '(repeat (choice regexp symbol)))
+
+(defcustom corfu-commit-predicate t
+  "Automatically commit the selected candidate if the predicate returns t."
+  :type '(choice (const nil) (const t) 'function))
+
 (defcustom corfu-quit-at-boundary nil
   "Automatically quit at completion field/word boundary.
 If automatic quitting is disabled, Orderless filtering is facilitated since a
@@ -88,6 +98,11 @@ filter string with spaces is allowed."
 (defcustom corfu-auto-delay 0.2
   "Delay for auto completion."
   :type 'float)
+
+(defcustom corfu-auto-commands
+  '("self-insert-command\\'")
+  "Commands which initiate auto completion."
+  :type '(repeat (choice regexp symbol)))
 
 (defcustom corfu-auto nil
   "Enable auto completion."
@@ -175,20 +190,11 @@ filter string with spaces is allowed."
 (defvar-local corfu--overlay nil
   "Current candidate overlay.")
 
-(defvar-local corfu--extra-properties nil
+(defvar-local corfu--extra nil
   "Extra completion properties.")
 
 (defvar corfu--frame nil
   "Popup frame.")
-
-(defvar corfu--auto-commands
-  "\\`\\(.*self-insert-command\\)\\'"
-  "Commands which initiate auto completion.")
-
-(defvar corfu--continue-commands
-  ;; nil is undefined command
-  "\\`\\(nil\\|completion-at-point\\|corfu-.*\\|scroll-other-window.*\\)\\'"
-  "Continue Corfu completion after executing commands matching this regexp.")
 
 (defconst corfu--state-vars
   '(corfu--base
@@ -198,7 +204,7 @@ filter string with spaces is allowed."
     corfu--input
     corfu--total
     corfu--overlay
-    corfu--extra-properties)
+    corfu--extra)
   "Buffer-local state variables used by Corfu.")
 
 (defvar corfu--frame-parameters
@@ -247,14 +253,9 @@ filter string with spaces is allowed."
 
 (defvar corfu--mouse-ignore-map
   (let ((map (make-sparse-keymap)))
-    (dolist (k '(mouse-1 down-mouse-1 drag-mouse-1 double-mouse-1 triple-mouse-1
-                 mouse-2 down-mouse-2 drag-mouse-2 double-mouse-2 triple-mouse-2
-                 mouse-3 down-mouse-3 drag-mouse-3 double-mouse-3 triple-mouse-3
-                 mouse-4 down-mouse-4 drag-mouse-4 double-mouse-4 triple-mouse-4
-                 mouse-5 down-mouse-5 drag-mouse-5 double-mouse-5 triple-mouse-5
-                 mouse-6 down-mouse-6 drag-mouse-6 double-mouse-6 triple-mouse-6
-                 mouse-7 down-mouse-7 drag-mouse-7 double-mouse-7 triple-mouse-7))
-      (define-key map (vector k) #'ignore))
+    (dotimes (i 7)
+      (dolist (k '(mouse down-mouse drag-mouse double-mouse triple-mouse))
+        (define-key map (vector (intern (format "%s-%s" k (1+ i)))) #'ignore)))
     map)
   "Ignore all mouse clicks.")
 
@@ -495,10 +496,14 @@ filter string with spaces is allowed."
            corfu--total total
            corfu--highlight hl))))
 
-(defun corfu--continue-p ()
-  "Return t if the Corfu popup should stay alive."
-  (and (symbolp this-command)
-       (string-match-p corfu--continue-commands (symbol-name this-command))))
+(defun corfu--match-symbol-p (pattern sym)
+  "Return non-nil if SYM is matching an element of the PATTERN list."
+  (and (symbolp sym)
+       (seq-some (lambda (x)
+                   (if (symbolp x)
+                       (eq sym x)
+                     (string-match-p x (symbol-name sym))))
+                 pattern)))
 
 (defun corfu-quit ()
   "Quit Corfu completion."
@@ -508,10 +513,10 @@ filter string with spaces is allowed."
 (defun corfu--affixate (metadata candidates)
   "Annotate CANDIDATES with annotation function specified by METADATA."
   (if-let (aff (or (corfu--metadata-get metadata 'affixation-function)
-                   (plist-get corfu--extra-properties :affixation-function)))
+                   (plist-get corfu--extra :affixation-function)))
       (funcall aff candidates)
     (if-let (ann (or (corfu--metadata-get metadata 'annotation-function)
-                     (plist-get corfu--extra-properties :annotation-function)))
+                     (plist-get corfu--extra :annotation-function)))
         (mapcar (lambda (cand)
                   (let ((suffix (or (funcall ann cand) "")))
                     (list cand ""
@@ -585,7 +590,8 @@ filter string with spaces is allowed."
       nil)
      ((and corfu--candidates                          ;; 2) There exist candidates
            (not (equal corfu--candidates (list str))) ;; &  Not a sole exactly matching candidate
-           (or (/= beg end) (corfu--continue-p)))     ;; &  Input is non-empty or continue command
+           (or (/= beg end)                           ;; &  Input is non-empty or continue command
+               (corfu--match-symbol-p corfu-continue-commands this-command)))
       (corfu--show-candidates beg end str metadata)   ;; => Show candidates popup
       t)
      ;; 3) When after `completion-at-point/corfu-complete', no further completion is possible and the
@@ -605,8 +611,12 @@ filter string with spaces is allowed."
 (defun corfu--pre-command ()
   "Insert selected candidate unless command is marked to continue completion."
   (add-hook 'window-configuration-change-hook #'corfu--popup-hide)
-  (unless (or (< corfu--index 0) (corfu--continue-p))
-    (corfu--insert 'exact)))
+  (unless (or (< corfu--index 0) (corfu--match-symbol-p corfu-continue-commands this-command))
+    (if (if (functionp corfu-commit-predicate)
+            (funcall corfu-commit-predicate)
+          corfu-commit-predicate)
+        (corfu--insert 'exact)
+      (setq corfu--index -1))))
 
 (defun corfu--post-command ()
   "Refresh Corfu after last command."
@@ -677,7 +687,7 @@ filter string with spaces is allowed."
   (interactive)
   (when (< corfu--index 0)
     (user-error "No candidate selected"))
-  (if-let* ((fun (plist-get corfu--extra-properties :company-doc-buffer))
+  (if-let* ((fun (plist-get corfu--extra :company-doc-buffer))
             (res (funcall fun (nth corfu--index corfu--candidates))))
       (let ((buf (or (car-safe res) res)))
         (corfu--restore-on-next-command)
@@ -691,7 +701,7 @@ filter string with spaces is allowed."
   (interactive)
   (when (< corfu--index 0)
     (user-error "No candidate selected"))
-  (if-let* ((fun (plist-get corfu--extra-properties :company-location))
+  (if-let* ((fun (plist-get corfu--extra :company-location))
             (loc (funcall fun (nth corfu--index corfu--candidates))))
       (let ((buf (or (and (bufferp (car loc)) (car loc)) (find-file-noselect (car loc) t))))
         (corfu--restore-on-next-command)
@@ -744,7 +754,7 @@ filter string with spaces is allowed."
 (defun corfu--done (str status)
   "Call the `:exit-function' with STR and STATUS and exit completion."
   ;; XXX Is the :exit-function handling sufficient?
-  (when-let (exit (plist-get corfu--extra-properties :exit-function))
+  (when-let (exit (plist-get corfu--extra :exit-function))
     (funcall exit str status))
   (corfu-quit))
 
@@ -758,7 +768,7 @@ filter string with spaces is allowed."
 (defun corfu--setup ()
   "Setup Corfu completion state."
   (when completion-in-region-mode
-    (setq corfu--extra-properties completion-extra-properties)
+    (setq corfu--extra completion-extra-properties)
     (setcdr (assq #'completion-in-region-mode minor-mode-overriding-map-alist) corfu-map)
     (add-hook 'pre-command-hook #'corfu--pre-command nil 'local)
     (add-hook 'post-command-hook #'corfu--post-command nil 'local)
@@ -825,8 +835,7 @@ filter string with spaces is allowed."
     (setq corfu--auto-timer nil))
   (when (and (not completion-in-region-mode)
              (display-graphic-p)
-             (symbolp this-command)
-             (string-match-p corfu--auto-commands (symbol-name this-command)))
+             (corfu--match-symbol-p corfu-auto-commands this-command))
     (setq corfu--auto-timer (run-with-idle-timer corfu-auto-delay nil
                                                  #'corfu--auto-complete
                                                  (current-buffer)))))
