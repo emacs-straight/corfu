@@ -67,7 +67,7 @@
 
 (defcustom corfu-commit-predicate t
   "Automatically commit the selected candidate if the predicate returns t."
-  :type '(choice (const nil) (const t) 'function))
+  :type '(choice boolean (function :tag "Predicate function")))
 
 (defcustom corfu-quit-at-boundary nil
   "Automatically quit at completion field/word boundary.
@@ -75,9 +75,11 @@ If automatic quitting is disabled, Orderless filtering is facilitated since a
 filter string with spaces is allowed."
   :type 'boolean)
 
-(defcustom corfu-quit-no-match nil
-  "Automatically quit if no matching candidate is found."
-  :type 'boolean)
+(defcustom corfu-quit-no-match 1.0
+  "Automatically quit if no matching candidate is found.
+If a floating point number, quit on no match only if the auto-started
+completion began less than that number of seconds ago."
+  :type '(choice boolean float))
 
 (defcustom corfu-excluded-modes nil
   "List of modes excluded by `corfu-global-mode'."
@@ -90,6 +92,10 @@ filter string with spaces is allowed."
 (defcustom corfu-bar-width 0.25
   "Width of the bar in units of the character width."
   :type 'float)
+
+(defcustom corfu-echo-documentation 0.25
+  "Show documentation string in the echo area after that number of seconds."
+  :type '(choice boolean float))
 
 (defcustom corfu-auto-prefix 3
   "Minimum length of prefix for auto completion."
@@ -140,6 +146,10 @@ filter string with spaces is allowed."
     (((class color) (min-colors 88) (background light)) :background "#bbb")
     (t :background "gray"))
   "The background color used for the thin border.")
+
+(defface corfu-echo
+  '((t :inherit completions-annotations))
+  "Face used to for echo area messages.")
 
 (defvar corfu-map
   (let ((map (make-sparse-keymap)))
@@ -193,6 +203,12 @@ filter string with spaces is allowed."
 (defvar-local corfu--extra nil
   "Extra completion properties.")
 
+(defvar-local corfu--auto-start nil
+  "Auto completion start time.")
+
+(defvar-local corfu--echo-timer nil
+  "Echo area message timer.")
+
 (defvar corfu--frame nil
   "Popup frame.")
 
@@ -204,7 +220,9 @@ filter string with spaces is allowed."
     corfu--input
     corfu--total
     corfu--overlay
-    corfu--extra)
+    corfu--extra
+    corfu--auto-start
+    corfu--echo-timer)
   "Buffer-local state variables used by Corfu.")
 
 (defvar corfu--frame-parameters
@@ -559,10 +577,31 @@ filter string with spaces is allowed."
       (setq lo (min (- corfu-count bar 2) lo)))
     (corfu--popup-show (+ beg corfu--base) ann-cands curr (and (> corfu--total corfu-count) lo) bar)
     (when (>= curr 0)
-      (setq corfu--overlay (make-overlay beg end nil t t))
-      (overlay-put corfu--overlay 'priority 1000)
-      (overlay-put corfu--overlay 'window (selected-window))
-      (overlay-put corfu--overlay 'display (concat (substring str 0 corfu--base) (nth curr cands))))))
+      (corfu--echo-documentation (nth corfu--index corfu--candidates))
+      (corfu--show-overlay beg end str (nth curr cands)))))
+
+(defun corfu--show-overlay (beg end str cand)
+  "Show current CAND as overlay given BEG, END and STR."
+  (setq corfu--overlay (make-overlay beg end nil t t))
+  (overlay-put corfu--overlay 'priority 1000)
+  (overlay-put corfu--overlay 'window (selected-window))
+  (overlay-put corfu--overlay 'display (concat (substring str 0 corfu--base) cand)))
+
+(defun corfu--echo (msg)
+  "Show MSG in echo area."
+  (let ((message-log-max nil))
+    (message "%s" (if (text-property-not-all 0 (length msg) 'face nil msg)
+                      msg
+                    (propertize msg 'face 'corfu-echo)))))
+
+(defun corfu--echo-documentation (cand)
+  "Show documentation string for CAND in echo area."
+  (when-let* ((fun (and corfu-echo-documentation (plist-get corfu--extra :company-docsig)))
+              (doc (funcall fun cand)))
+    (if (eq corfu-echo-documentation t)
+        (corfu--echo doc)
+      (setq corfu--echo-timer (run-with-idle-timer corfu-echo-documentation
+                                                   nil #'corfu--echo doc)))))
 
 (defun corfu--update (msg)
   "Refresh Corfu UI, possibly printing a message with MSG."
@@ -574,6 +613,9 @@ filter string with spaces is allowed."
     (when corfu--overlay
       (delete-overlay corfu--overlay)
       (setq corfu--overlay nil))
+    (when corfu--echo-timer
+      (cancel-timer corfu--echo-timer)
+      (setq corfu--echo-timer nil))
     (cond
      ;; XXX Guard against errors during candidate generation.
      ;; Turn off completion immediately if there are errors
@@ -604,7 +646,12 @@ filter string with spaces is allowed."
            (test-completion str table pred))
       (corfu--done str 'finished)
       nil)
-     ((not (or corfu--candidates corfu-quit-no-match))           ;; 4) There are no candidates
+     ((not (or corfu--candidates                      ;; 4) There are no candidates
+               ;; When `corfu-quit-no-match' is a number of seconds and the auto completion wasn't
+               ;; initiated too long ago, quit directly without showing the "No match" popup.
+               (if (and corfu--auto-start (numberp corfu-quit-no-match))
+                   (< (- (float-time) corfu--auto-start) corfu-quit-no-match)
+                 (eq t corfu-quit-no-match))))
       (corfu--popup-show beg '(#("No match" 0 8 (face italic)))) ;; => Show confirmation popup
       t))))
 
@@ -629,7 +676,9 @@ filter string with spaces is allowed."
 
 (defun corfu--goto (index)
   "Go to candidate with INDEX."
-  (setq corfu--index (max -1 (min index (1- corfu--total)))))
+  (setq corfu--index (max -1 (min index (1- corfu--total)))
+        ;; Reset auto start in order to disable the `corfu-quit-no-match' timer
+        corfu--auto-start nil))
 
 (defun corfu-next ()
   "Go to next candidate."
@@ -782,6 +831,7 @@ filter string with spaces is allowed."
     (remove-hook 'post-command-hook #'corfu--post-command 'local)
     (remove-hook 'completion-in-region-mode-hook #'corfu--teardown 'local)
     (when corfu--overlay (delete-overlay corfu--overlay))
+    (when corfu--echo-timer (cancel-timer corfu--echo-timer))
     (mapc #'kill-local-variable corfu--state-vars)))
 
 (defun corfu--completion-in-region (&rest args)
@@ -822,7 +872,8 @@ filter string with spaces is allowed."
                      (= newbeg beg)))
                 (lambda () t))))
          (setq completion-in-region--data `(,(copy-marker beg) ,(copy-marker end t)
-                                            ,table ,(plist-get plist :predicate)))
+                                            ,table ,(plist-get plist :predicate))
+               corfu--auto-start (float-time))
          (completion-in-region-mode 1)
          (corfu--setup)
          (unless (corfu--update #'ignore)
