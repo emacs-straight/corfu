@@ -61,7 +61,8 @@
 
 (defcustom corfu-continue-commands
   ;; nil is undefined command
-  '(nil completion-at-point "\\`corfu-" "\\`scroll-other-window")
+  '(nil completion-at-point "\\`corfu-" "\\`scroll-other-window"
+        universal-argument universal-argument-more digit-argument)
   "Continue Corfu completion after executing these commands."
   :type '(repeat (choice regexp symbol)))
 
@@ -407,8 +408,7 @@ completion began less than that number of seconds ago."
     (make-frame-invisible corfu--frame)
     (with-current-buffer (window-buffer (frame-root-window corfu--frame))
       (let ((inhibit-read-only t))
-        (erase-buffer))))
-  (remove-hook 'window-configuration-change-hook #'corfu--popup-hide))
+        (erase-buffer)))))
 
 (defun corfu--move-to-front (elem list)
   "Move ELEM to front of LIST."
@@ -499,6 +499,10 @@ completion began less than that number of seconds ago."
 
 (defun corfu--recompute-candidates (str metadata pt table pred)
   "Recompute candidates from STR, METADATA, PT, TABLE and PRED."
+  ;; Redisplay such that the input becomes immediately visible before the
+  ;; expensive candidate recomputation is performed (Issue #48). See also
+  ;; corresponding vertico#89.
+  (redisplay)
   (pcase-let* ((before (substring str 0 pt))
                (after (substring str pt))
                ;; bug#47678: `completion-boundaries` fails for `partial-completion`
@@ -635,7 +639,10 @@ completion began less than that number of seconds ago."
                (pt (- (point) beg))
                (str (buffer-substring-no-properties beg end))
                (metadata (completion-metadata (substring str 0 pt) table pred))
-               (initializing (not corfu--input)))
+               (initializing (not corfu--input))
+               (continue (or (/= beg end)
+                             (corfu--match-symbol-p corfu-continue-commands
+                                                    this-command))))
     (when corfu--overlay
       (delete-overlay corfu--overlay)
       (setq corfu--overlay nil))
@@ -648,7 +655,8 @@ completion began less than that number of seconds ago."
      ;; For example dabbrev throws error "No dynamic expansion ... found".
      ;; TODO Report this as a bug? Are completion tables supposed to throw errors?
      ((condition-case err
-          (unless (equal corfu--input (cons str pt))
+          ;; Only recompute when input changed and when input is non-empty
+          (when (and continue (not (equal corfu--input (cons str pt))))
             (corfu--update-candidates str metadata pt table pred)
             nil)
         (t (message "%s" (error-message-string err))
@@ -658,8 +666,7 @@ completion began less than that number of seconds ago."
       nil)
      ((and corfu--candidates                          ;; 2) There exist candidates
            (not (equal corfu--candidates (list str))) ;; &  Not a sole exactly matching candidate
-           (or (/= beg end)                           ;; &  Input is non-empty or continue command
-               (corfu--match-symbol-p corfu-continue-commands this-command)))
+           continue)                                  ;; &  Input is non-empty or continue command
       (corfu--show-candidates beg end str metadata)   ;; => Show candidates popup
       t)
      ;; 3) When after `completion-at-point/corfu-complete', no further completion is possible and the
@@ -683,7 +690,7 @@ completion began less than that number of seconds ago."
 
 (defun corfu--pre-command ()
   "Insert selected candidate unless command is marked to continue completion."
-  (add-hook 'window-configuration-change-hook #'corfu--popup-hide)
+  (add-hook 'window-configuration-change-hook #'corfu-quit)
   (unless (or (< corfu--index 0) (corfu--match-symbol-p corfu-continue-commands this-command))
     (if (if (functionp corfu-commit-predicate)
             (funcall corfu-commit-predicate)
@@ -693,7 +700,7 @@ completion began less than that number of seconds ago."
 
 (defun corfu--post-command ()
   "Refresh Corfu after last command."
-  (remove-hook 'window-configuration-change-hook #'corfu--popup-hide)
+  (remove-hook 'window-configuration-change-hook #'corfu-quit)
   (or (pcase completion-in-region--data
         (`(,beg ,end ,_table ,_pred)
          (when (and (eq (marker-buffer beg) (current-buffer)) (<= beg (point) end))
@@ -706,31 +713,28 @@ completion began less than that number of seconds ago."
         ;; Reset auto start in order to disable the `corfu-quit-no-match' timer
         corfu--auto-start nil))
 
-(defun corfu-next ()
-  "Go to next candidate."
-  (interactive)
-  (corfu--goto
-   (if (and corfu-cycle (= (1+ corfu--index) corfu--total))
-       -1
-     (1+ corfu--index))))
+(defun corfu-next (&optional n)
+  "Go forward N candidates."
+  (interactive "p")
+  (let ((index (+ corfu--index (or n 1))))
+    (corfu--goto (if corfu-cycle
+                     (1- (mod (1+ index) (1+ corfu--total)))
+                   index))))
 
-(defun corfu-previous ()
-  "Go to previous candidate."
-  (interactive)
-  (corfu--goto
-   (if (and corfu-cycle (< corfu--index 0))
-       (1- corfu--total)
-     (1- corfu--index))))
+(defun corfu-previous (&optional n)
+  "Go backward N candidates."
+  (interactive "p")
+  (corfu-next (- (or n 1))))
 
-(defun corfu-scroll-down ()
-  "Go back by one page."
-  (interactive)
-  (corfu--goto (max 0 (- corfu--index corfu-count))))
+(defun corfu-scroll-down (&optional n)
+  "Go back by N pages."
+  (interactive "p")
+  (corfu--goto (max 0 (- corfu--index (* (or n 1) corfu-count)))))
 
-(defun corfu-scroll-up ()
-  "Go forward by one page."
-  (interactive)
-  (corfu--goto (+ corfu--index corfu-count)))
+(defun corfu-scroll-up (&optional n)
+  "Go forward by N pages."
+  (interactive "p")
+  (corfu-scroll-down (- (or n 1))))
 
 (defun corfu-first ()
   "Go to first candidate, or to the prompt when the first candidate is selected."
@@ -848,18 +852,28 @@ completion began less than that number of seconds ago."
     (setcdr (assq #'completion-in-region-mode minor-mode-overriding-map-alist) corfu-map)
     (add-hook 'pre-command-hook #'corfu--pre-command nil 'local)
     (add-hook 'post-command-hook #'corfu--post-command nil 'local)
-    (add-hook 'completion-in-region-mode-hook #'corfu--teardown nil 'local)))
+    (let ((sym (make-symbol "corfu--teardown"))
+          (buf (current-buffer)))
+      (fset sym (lambda ()
+                  ;; Ensure that the teardown runs in the correct buffer, if still alive.
+                  (unless completion-in-region-mode
+                    (remove-hook 'completion-in-region-mode-hook sym)
+                    (with-current-buffer (if (buffer-live-p buf) buf (current-buffer))
+                      (corfu--teardown)))))
+      (add-hook 'completion-in-region-mode-hook sym))))
 
 (defun corfu--teardown ()
   "Teardown Corfu."
-  (unless completion-in-region-mode
-    (corfu--popup-hide)
-    (remove-hook 'pre-command-hook #'corfu--pre-command 'local)
-    (remove-hook 'post-command-hook #'corfu--post-command 'local)
-    (remove-hook 'completion-in-region-mode-hook #'corfu--teardown 'local)
-    (when corfu--overlay (delete-overlay corfu--overlay))
-    (when corfu--echo-timer (cancel-timer corfu--echo-timer))
-    (mapc #'kill-local-variable corfu--state-vars)))
+  ;; Redisplay such that the input becomes immediately visible before the popup
+  ;; hiding, which is slow (Issue #48). See also corresponding vertico#89.
+  (redisplay)
+  (corfu--popup-hide)
+  (remove-hook 'window-configuration-change-hook #'corfu-quit)
+  (remove-hook 'pre-command-hook #'corfu--pre-command 'local)
+  (remove-hook 'post-command-hook #'corfu--post-command 'local)
+  (when corfu--overlay (delete-overlay corfu--overlay))
+  (when corfu--echo-timer (cancel-timer corfu--echo-timer))
+  (mapc #'kill-local-variable corfu--state-vars))
 
 (defun corfu--completion-in-region (&rest args)
   "Corfu completion in region function passing ARGS to `completion--in-region'."
