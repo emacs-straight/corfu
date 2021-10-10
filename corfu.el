@@ -90,7 +90,7 @@ completion began less than that number of seconds ago."
   "Width of the margin in units of the character width."
   :type 'float)
 
-(defcustom corfu-bar-width 0.25
+(defcustom corfu-bar-width 0.2
   "Width of the bar in units of the character width."
   :type 'float)
 
@@ -121,30 +121,28 @@ completion began less than that number of seconds ago."
   :group 'faces)
 
 (defface corfu-background
-  '((((class color) (min-colors 88) (background dark))
-     :background "#222")
-    (((class color) (min-colors 88) (background light))
-     :background "#ffe")
+  '((((class color) (min-colors 88) (background dark)) :background "#191a1b")
+    (((class color) (min-colors 88) (background light)) :background "#f0f0f0")
     (t :background "gray"))
-  "Face used to for the popup background.")
+  "Face used for the popup background.")
 
 (defface corfu-current
   '((((class color) (min-colors 88) (background dark))
-     :background "#137" :foreground "white")
+     :background "#00415e" :foreground "white")
     (((class color) (min-colors 88) (background light))
-     :background "#cef" :foreground "black")
+     :background "#c0efff" :foreground "black")
     (t :background "blue" :foreground "white"))
   "Face used to highlight the currently selected candidate.")
 
 (defface corfu-bar
-  '((((class color) (min-colors 88) (background dark)) :background "#444")
-    (((class color) (min-colors 88) (background light)) :background "#bbb")
+  '((((class color) (min-colors 88) (background dark)) :background "#a8a8a8")
+    (((class color) (min-colors 88) (background light)) :background "#505050")
     (t :background "gray"))
   "The background color is used for the scrollbar indicator.")
 
 (defface corfu-border
-  '((((class color) (min-colors 88) (background dark)) :background "#444")
-    (((class color) (min-colors 88) (background light)) :background "#bbb")
+  '((((class color) (min-colors 88) (background dark)) :background "#323232")
+    (((class color) (min-colors 88) (background light)) :background "#d7d7d7")
     (t :background "gray"))
   "The background color used for the thin border.")
 
@@ -346,13 +344,19 @@ completion began less than that number of seconds ago."
     ;; XXX HACK We have to apply the face background before adjusting the frame parameter,
     ;; otherwise the border is not updated (BUG!).
     (let* ((face (if (facep 'child-frame-border) 'child-frame-border 'internal-border))
-	   (new (face-attribute 'corfu-border :background)))
-      (unless (equal (face-attribute face :background corfu--frame) new)
+	   (new (face-attribute 'corfu-border :background nil 'default)))
+      (unless (equal (face-attribute face :background corfu--frame 'default) new)
 	(set-face-background face new corfu--frame)))
-    (let ((new (face-attribute 'corfu-background :background)))
+    (let ((new (face-attribute 'corfu-background :background nil 'default)))
       (unless (equal (frame-parameter corfu--frame 'background-color) new)
 	(set-frame-parameter corfu--frame 'background-color new)))
-    (set-window-buffer (frame-root-window corfu--frame) buffer)
+    (let ((win (frame-root-window corfu--frame)))
+      (set-window-buffer win buffer)
+      ;; Mark window as dedicated to prevent frame reuse (#60)
+      (set-window-dedicated-p win t)
+      ;; Disallow selection of root window (#63)
+      (set-window-parameter win 'no-delete-other-windows t)
+      (set-window-parameter win 'no-other-window t))
     ;; XXX HACK Make the frame invisible before moving the popup in order to avoid flicker.
     (unless (eq (cdr (frame-position corfu--frame)) y)
       (make-frame-invisible corfu--frame))
@@ -372,7 +376,7 @@ completion began less than that number of seconds ago."
                 (propertize " " 'display `(space :width (,(- mw bw))))
                 (propertize " " 'face 'corfu-bar 'display `(space :width (,bw)))))
          (width (min corfu-max-width
-                     (/ (frame-width) 2)
+                     (frame-width)
                      (apply #'max corfu-min-width
                             (mapcar #'string-width lines))))
          (row 0)
@@ -459,36 +463,6 @@ completion began less than that number of seconds ago."
       (and (= (length x) (length y))
            (string< x y))))
 
-(defmacro corfu--partition! (list form)
-  "Evaluate FORM for every element and partition LIST."
-  (let ((head1 (make-symbol "head1"))
-        (head2 (make-symbol "head2"))
-        (tail1 (make-symbol "tail1"))
-        (tail2 (make-symbol "tail2")))
-    `(let* ((,head1 (cons nil nil))
-            (,head2 (cons nil nil))
-            (,tail1 ,head1)
-            (,tail2 ,head2))
-       (while ,list
-         (if (let ((it (car ,list))) ,form)
-             (progn
-               (setcdr ,tail1 ,list)
-               (pop ,tail1))
-           (setcdr ,tail2 ,list)
-           (pop ,tail2))
-         (pop ,list))
-       (setcdr ,tail1 (cdr ,head2))
-       (setcdr ,tail2 nil)
-       (setq ,list (cdr ,head1)))))
-
-(defun corfu--move-prefix-candidates-to-front (field candidates)
-  "Move CANDIDATES which match prefix of FIELD to the beginning."
-  (let* ((word (replace-regexp-in-string " .*" "" field))
-         (len (length word)))
-    (corfu--partition! candidates
-                       (and (>= (length it) len)
-                            (eq t (compare-strings word 0 len it 0 len))))))
-
 (defun corfu--filter-files (files)
   "Filter FILES by `completion-ignored-extensions'."
   (let ((re (concat "\\(?:\\(?:\\`\\|/\\)\\.\\.?/\\|"
@@ -525,7 +499,6 @@ completion began less than that number of seconds ago."
     (setq all (if-let (sort (corfu--metadata-get metadata 'display-sort-function))
                   (funcall sort all)
                 (sort all #'corfu--sort-predicate)))
-    (setq all (corfu--move-prefix-candidates-to-front field all))
     (when (and completing-file (not (string-suffix-p "/" field)))
       (setq all (corfu--move-to-front (concat field "/") all)))
     (setq all (corfu--move-to-front field all))
@@ -918,7 +891,8 @@ completion began less than that number of seconds ago."
                              #'completion--capf-wrapper 'all)
       ((and `(,fun ,beg ,end ,table . ,plist)
             (guard (integer-or-marker-p beg))
-            (guard (>= (- end beg) corfu-auto-prefix)))
+            (guard (<= beg (point) end))
+            (guard (>= (- (point) beg) corfu-auto-prefix)))
        (let ((completion-extra-properties plist)
              (completion-in-region-mode-predicate
               (if corfu-quit-at-boundary
@@ -949,7 +923,7 @@ completion began less than that number of seconds ago."
 ;;;###autoload
 (define-minor-mode corfu-mode
   "Completion Overlay Region FUnction"
-  :global nil
+  :global nil :group 'corfu
   (if corfu-mode
       (progn
         (and corfu-auto (add-hook 'post-command-hook #'corfu--auto-post-command nil 'local))
@@ -958,7 +932,7 @@ completion began less than that number of seconds ago."
     (kill-local-variable 'completion-in-region-function)))
 
 ;;;###autoload
-(define-globalized-minor-mode corfu-global-mode corfu-mode corfu--on)
+(define-globalized-minor-mode corfu-global-mode corfu-mode corfu--on :group 'corfu)
 
 (defun corfu--on ()
   "Turn `corfu-mode' on."
