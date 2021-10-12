@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.11
+;; Version: 0.13
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -463,6 +463,36 @@ completion began less than that number of seconds ago."
       (and (= (length x) (length y))
            (string< x y))))
 
+(defmacro corfu--partition! (list form)
+  "Evaluate FORM for every element and partition LIST."
+  (let ((head1 (make-symbol "head1"))
+        (head2 (make-symbol "head2"))
+        (tail1 (make-symbol "tail1"))
+        (tail2 (make-symbol "tail2")))
+    `(let* ((,head1 (cons nil nil))
+            (,head2 (cons nil nil))
+            (,tail1 ,head1)
+            (,tail2 ,head2))
+       (while ,list
+         (if (let ((it (car ,list))) ,form)
+             (progn
+               (setcdr ,tail1 ,list)
+               (pop ,tail1))
+           (setcdr ,tail2 ,list)
+           (pop ,tail2))
+         (pop ,list))
+       (setcdr ,tail1 (cdr ,head2))
+       (setcdr ,tail2 nil)
+       (setq ,list (cdr ,head1)))))
+
+(defun corfu--move-prefix-candidates-to-front (field candidates)
+  "Move CANDIDATES which match prefix of FIELD to the beginning."
+  (let* ((word (car (split-string field)))
+         (len (length word)))
+    (corfu--partition! candidates
+                       (and (>= (length it) len)
+                            (eq t (compare-strings word 0 len it 0 len))))))
+
 (defun corfu--filter-files (files)
   "Filter FILES by `completion-ignored-extensions'."
   (let ((re (concat "\\(?:\\(?:\\`\\|/\\)\\.\\.?/\\|"
@@ -499,9 +529,11 @@ completion began less than that number of seconds ago."
     (setq all (if-let (sort (corfu--metadata-get metadata 'display-sort-function))
                   (funcall sort all)
                 (sort all #'corfu--sort-predicate)))
-    (when (and completing-file (not (string-suffix-p "/" field)))
-      (setq all (corfu--move-to-front (concat field "/") all)))
-    (setq all (corfu--move-to-front field all))
+    (unless (equal field "")
+      (setq all (corfu--move-prefix-candidates-to-front field all))
+      (when (and completing-file (not (string-suffix-p "/" field)))
+        (setq all (corfu--move-to-front (concat field "/") all)))
+      (setq all (corfu--move-to-front field all)))
     (list base (length all) all hl)))
 
 (defun corfu--update-candidates (str metadata pt table pred)
@@ -631,7 +663,7 @@ completion began less than that number of seconds ago."
           (when (and continue (not (equal corfu--input (cons str pt))))
             (corfu--update-candidates str metadata pt table pred)
             nil)
-        (t (message "%s" (error-message-string err))
+        (t (message "Corfu completion error: %s" (error-message-string err))
            nil)))
      ((and initializing (not corfu--candidates))      ;; 1) Initializing, no candidates
       (funcall msg "No match")                        ;; => Show error message
