@@ -543,8 +543,7 @@ completion began less than that number of seconds ago."
 
 (defun corfu--update-candidates (str pt table pred)
   "Update candidates from STR, PT, TABLE and PRED."
-  (pcase (let ((while-no-input-ignore-events '(selection-request)))
-           (while-no-input (corfu--recompute-candidates str pt table pred)))
+  (pcase (while-no-input (corfu--recompute-candidates str pt table pred))
     ('nil (keyboard-quit))
     (`(,base ,total ,candidates ,hl ,metadata)
      (setq corfu--input (cons str pt)
@@ -557,11 +556,10 @@ completion began less than that number of seconds ago."
 (defun corfu--match-symbol-p (pattern sym)
   "Return non-nil if SYM is matching an element of the PATTERN list."
   (and (symbolp sym)
-       (seq-some (lambda (x)
-                   (if (symbolp x)
-                       (eq sym x)
-                     (string-match-p x (symbol-name sym))))
-                 pattern)))
+       (cl-loop for x in pattern
+                thereis (if (symbolp x)
+                            (eq sym x)
+                          (string-match-p x (symbol-name sym))))))
 
 (defun corfu-quit ()
   "Quit Corfu completion."
@@ -955,8 +953,8 @@ completion began less than that number of seconds ago."
     (cancel-timer corfu--auto-timer)
     (setq corfu--auto-timer nil))
   (when (and (not completion-in-region-mode)
-             (display-graphic-p)
-             (corfu--match-symbol-p corfu-auto-commands this-command))
+             (corfu--match-symbol-p corfu-auto-commands this-command)
+             (display-graphic-p))
     (setq corfu--auto-timer (run-with-idle-timer corfu-auto-delay nil
                                                  #'corfu--auto-complete
                                                  (current-buffer)))))
