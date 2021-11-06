@@ -148,7 +148,11 @@ completion began less than that number of seconds ago."
 
 (defface corfu-echo
   '((t :inherit completions-annotations))
-  "Face used to for echo area messages.")
+  "Face used for echo area messages.")
+
+(defface corfu-annotations
+  '((t :inherit completions-annotations))
+  "Face used for annotations.")
 
 (defvar corfu-map
   (let ((map (make-sparse-keymap)))
@@ -384,14 +388,9 @@ completion began less than that number of seconds ago."
                      (apply #'max corfu-min-width
                             (mapcar #'string-width lines))))
          (row 0)
-         ;;; XXX HACK On Emacs 28 y-coordinate position computation is wrong if
-         ;;; there exists a flymake underline overlay at that point. Therefore
-         ;;; compute the y-coordinate at the line beginning.
-         (x (or (car (posn-x-y (posn-at-point pos))) 0))
-         (y (save-excursion
-              (goto-char pos)
-              (beginning-of-visual-line)
-              (or (cdr (posn-x-y (posn-at-point))) 0))))
+         (pos (posn-x-y (posn-at-point pos)))
+         (x (or (car pos) 0))
+         (y (or (cdr pos) 0)))
     (corfu--make-frame
      (- x mw) y
      (+ (* width cw) mw mw) (* (length lines) ch)
@@ -577,10 +576,11 @@ completion began less than that number of seconds ago."
                   (let ((suffix (or (funcall ann cand) "")))
                     (list cand ""
                           ;; The default completion UI adds the `completions-annotations' face
-                          ;; if no other faces are present.
+                          ;; if no other faces are present. We use a custom `corfu-annotations'
+                          ;; face to allow further styling which fits better for popups.
                           (if (text-property-not-all 0 (length suffix) 'face nil suffix)
                               suffix
-                            (propertize suffix 'face 'completions-annotations)))))
+                            (propertize suffix 'face 'corfu-annotations)))))
                 candidates)
       candidates)))
 
