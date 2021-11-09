@@ -86,7 +86,7 @@ completion began less than that number of seconds ago."
   "List of modes excluded by `corfu-global-mode'."
   :type '(repeat symbol))
 
-(defcustom corfu-margin-width 0.4
+(defcustom corfu-margin-width 0.6
   "Width of the margin in units of the character width."
   :type 'float)
 
@@ -153,6 +153,10 @@ completion began less than that number of seconds ago."
 (defface corfu-annotations
   '((t :inherit completions-annotations))
   "Face used for annotations.")
+
+(defface corfu-deprecated
+  '((t :inherit shadow :strike-through t))
+  "Face used for deprecated candidates.")
 
 (defvar corfu-map
   (let ((map (make-sparse-keymap)))
@@ -366,16 +370,16 @@ completion began less than that number of seconds ago."
       (set-window-parameter win 'no-delete-other-windows t)
       (set-window-parameter win 'no-other-window t))
     ;; XXX HACK Make the frame invisible before moving the popup in order to avoid flicker.
-    (unless (eq (cdr (frame-position corfu--frame)) y)
-      (make-frame-invisible corfu--frame))
-    (set-frame-position corfu--frame x y)
+    (unless (equal (frame-position corfu--frame) (cons x y))
+      (make-frame-invisible corfu--frame)
+      (set-frame-position corfu--frame x y))
     (set-frame-size corfu--frame width height t)
     (make-frame-visible corfu--frame)))
 
 (defun corfu--popup-show (pos lines &optional curr lo bar)
   "Show LINES as popup at POS, with CURR highlighted and scrollbar from LO to LO+BAR."
   (let* ((ch (default-line-height))
-         (cw (round (* ch (frame-char-width)) (frame-char-height)))
+         (cw (default-font-width))
          (mw (ceiling (* cw corfu-margin-width)))
          (bw (ceiling (* cw (min corfu-margin-width corfu-bar-width))))
          (margin (propertize " " 'display `(space :width (,mw))))
@@ -559,24 +563,32 @@ completion began less than that number of seconds ago."
   (interactive)
   (completion-in-region-mode -1))
 
-(defun corfu--affixate (candidates)
-  "Annotate CANDIDATES with annotation function."
-  (if-let (aff (or (corfu--metadata-get corfu--metadata 'affixation-function)
-                   (plist-get corfu--extra :affixation-function)))
-      (funcall aff candidates)
-    (if-let (ann (or (corfu--metadata-get corfu--metadata 'annotation-function)
-                     (plist-get corfu--extra :annotation-function)))
-        (mapcar (lambda (cand)
-                  (let ((suffix (or (funcall ann cand) "")))
-                    (list cand ""
-                          ;; The default completion UI adds the `completions-annotations' face
-                          ;; if no other faces are present. We use a custom `corfu-annotations'
-                          ;; face to allow further styling which fits better for popups.
-                          (if (text-property-not-all 0 (length suffix) 'face nil suffix)
-                              suffix
-                            (propertize suffix 'face 'corfu-annotations)))))
-                candidates)
-      (mapcar (lambda (cand) (list cand "" "")) candidates))))
+(defun corfu--affixate (cands)
+  "Annotate CANDS with annotation function."
+  (setq cands
+        (if-let (aff (or (corfu--metadata-get corfu--metadata 'affixation-function)
+                         (plist-get corfu--extra :affixation-function)))
+            (funcall aff cands)
+          (if-let (ann (or (corfu--metadata-get corfu--metadata 'annotation-function)
+                           (plist-get corfu--extra :annotation-function)))
+              (mapcar (lambda (cand)
+                        (let ((suffix (or (funcall ann cand) "")))
+                          (list cand ""
+                                ;; The default completion UI adds the `completions-annotations' face
+                                ;; if no other faces are present. We use a custom `corfu-annotations'
+                                ;; face to allow further styling which fits better for popups.
+                                (if (text-property-not-all 0 (length suffix) 'face nil suffix)
+                                    suffix
+                                  (propertize suffix 'face 'corfu-annotations)))))
+                      cands)
+            (mapcar (lambda (cand) (list cand "" "")) cands))))
+  (when-let (dep (plist-get corfu--extra :company-deprecated))
+    (mapc (pcase-lambda ((and x `(,c . ,_)))
+            (when (funcall dep c)
+              (setcar x (setq c (substring c)))
+              (add-face-text-property 0 (length c) 'corfu-deprecated 'append c)))
+          cands))
+  cands)
 
 ;; XXX Do not use `completion-metadata-get' in order to avoid Marginalia.
 ;; The Marginalia annotators are way to heavy for the Corfu popup!
@@ -590,10 +602,11 @@ completion began less than that number of seconds ago."
         (cl-loop for c in cands collect
                  (cl-loop for s in c collect
                           (string-trim (replace-regexp-in-string "[ \t]*\n[ \t]*" " " s)))))
-  (let* ((cw (1+ (cl-loop for x in cands maximize (string-width (car x)))))
+  (let* ((cw (cl-loop for x in cands maximize (string-width (car x))))
          (pw (cl-loop for x in cands maximize (string-width (cadr x))))
-         (pw (if (> pw 0) (1+ pw) 0))
          (sw (cl-loop for x in cands maximize (string-width (caddr x))))
+         (pw (if (> pw 0) (1+ pw) 0))
+         (sw (if (> sw 0) (1+ sw) 0))
          (width (+ pw cw sw)))
     (when (< width corfu-min-width)
       (setq cw (+ cw (- corfu-min-width width))
@@ -605,7 +618,9 @@ completion began less than that number of seconds ago."
                (concat prefix
                        (make-string (- pw (string-width prefix)) ?\s)
                        cand
-                       (unless (eq suffix "") (make-string (- cw (string-width cand)) ?\s))
+                       (make-string (+ (- cw (string-width cand))
+                                       (- sw (string-width suffix)))
+                                    ?\s)
                        suffix)
                width))
             cands)))
@@ -947,7 +962,8 @@ completion began less than that number of seconds ago."
       ((and `(,fun ,beg ,end ,table . ,plist)
             (guard (integer-or-marker-p beg))
             (guard (<= beg (point) end))
-            (guard (>= (- (point) beg) corfu-auto-prefix)))
+            (let len (or (plist-get plist :company-prefix-length) (- (point) beg)))
+            (guard (or (eq len t) (>= len corfu-auto-prefix))))
        (let ((completion-extra-properties plist)
              (completion-in-region-mode-predicate
               (lambda () (eq beg (car-safe (funcall fun))))))
