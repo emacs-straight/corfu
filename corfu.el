@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.13
+;; Version: 0.14
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -86,8 +86,12 @@ completion began less than that number of seconds ago."
   "List of modes excluded by `corfu-global-mode'."
   :type '(repeat symbol))
 
-(defcustom corfu-margin-width 0.6
-  "Width of the margin in units of the character width."
+(defcustom corfu-left-margin-width 0.5
+  "Width of the left margin in units of the character width."
+  :type 'float)
+
+(defcustom corfu-right-margin-width 0.5
+  "Width of the right margin in units of the character width."
   :type 'float)
 
 (defcustom corfu-bar-width 0.2
@@ -97,6 +101,13 @@ completion began less than that number of seconds ago."
 (defcustom corfu-echo-documentation 0.25
   "Show documentation string in the echo area after that number of seconds."
   :type '(choice boolean float))
+
+(defcustom corfu-kind-formatter nil
+  "Formatting function for candidate kind.
+The function takes a symbol corresponding to the kind of the candidate
+and must return a string. This function can be used to display icons in
+front of the candidates."
+  :type '(choice function (const nil)))
 
 (defcustom corfu-auto-prefix 3
   "Minimum length of prefix for auto completion."
@@ -370,35 +381,38 @@ completion began less than that number of seconds ago."
       (set-window-parameter win 'no-delete-other-windows t)
       (set-window-parameter win 'no-other-window t))
     ;; XXX HACK Make the frame invisible before moving the popup in order to avoid flicker.
-    (unless (equal (frame-position corfu--frame) (cons x y))
-      (make-frame-invisible corfu--frame)
-      (set-frame-position corfu--frame x y))
+    (unless (eq (cdr (frame-position corfu--frame)) y)
+      (make-frame-invisible corfu--frame))
+    (set-frame-position corfu--frame x y)
     (set-frame-size corfu--frame width height t)
     (make-frame-visible corfu--frame)))
 
-(defun corfu--popup-show (pos lines &optional curr lo bar)
-  "Show LINES as popup at POS, with CURR highlighted and scrollbar from LO to LO+BAR."
+(defun corfu--popup-show (pos off width lines &optional curr lo bar)
+  "Show LINES as popup at POS - OFF.
+WIDTH is the width of the popup.
+The current candidate CURR is highlighted.
+A scroll bar is displayed from LO to LO+BAR."
   (let* ((ch (default-line-height))
          (cw (default-font-width))
-         (mw (ceiling (* cw corfu-margin-width)))
-         (bw (ceiling (* cw (min corfu-margin-width corfu-bar-width))))
-         (margin (propertize " " 'display `(space :width (,mw))))
-         (align (propertize " " 'display `(space :align-to (- right (,mw)))))
-         (sbar (concat
-                (propertize " " 'display `(space :width (,(- mw bw))))
-                (propertize " " 'face 'corfu-bar 'display `(space :width (,bw)))))
-         (width (cl-loop for x in lines maximize (string-width x)))
+         (lm (ceiling (* cw corfu-left-margin-width)))
+         (rm (ceiling (* cw corfu-right-margin-width)))
+         (bw (ceiling (min rm (* cw corfu-bar-width))))
+         (lmargin (and (> lm 0) (propertize " " 'display `(space :width (,lm)))))
+         (rmargin (and (> rm 0) (propertize " " 'display `(space :align-to right))))
+         (sbar (when (> bw 0)
+                 (concat (propertize " " 'display `(space :align-to (- right (,rm))))
+                         (propertize " " 'display `(space :width (,(- rm bw))))
+                         (propertize " " 'face 'corfu-bar 'display `(space :width (,bw))))))
          (row 0)
          (pos (posn-x-y (posn-at-point pos)))
          (x (or (car pos) 0))
          (y (or (cdr pos) 0)))
     (corfu--make-frame
-     (- x mw) y
-     (+ (* width cw) mw mw) (* (length lines) ch)
+     (- x lm (* cw off)) y
+     (+ (* width cw) lm rm) (* (length lines) ch)
      (mapconcat (lambda (line)
-                  (let ((str (concat margin line align
-                                     (if (and lo (<= lo row (+ lo bar)))
-                                         sbar margin))))
+                  (let ((str (concat lmargin line
+                                     (if (and lo (<= lo row (+ lo bar))) sbar rmargin))))
                     (when (eq row curr)
                       (add-face-text-property
                        0 (length str) 'corfu-current 'append str))
@@ -509,7 +523,7 @@ completion began less than that number of seconds ago."
   (redisplay)
   (pcase-let* ((before (substring str 0 pt))
                (after (substring str pt))
-               (metadata (completion-metadata before table pred))
+               (corfu--metadata (completion-metadata before table pred))
                ;; bug#47678: `completion-boundaries` fails for `partial-completion`
                ;; if the cursor is moved between the slashes of "~//".
                ;; See also vertico.el which has the same issue.
@@ -520,15 +534,15 @@ completion began less than that number of seconds ago."
                                                       after)
                              (t (cons 0 (length after))))))
                (field (substring str (car bounds) (+ pt (cdr bounds))))
-               (completing-file (eq (corfu--metadata-get metadata 'category) 'file))
-               (`(,all . ,hl) (corfu--all-completions str table pred pt metadata))
+               (completing-file (eq (corfu--metadata-get 'category) 'file))
+               (`(,all . ,hl) (corfu--all-completions str table pred pt corfu--metadata))
                (base (or (when-let (z (last all)) (prog1 (cdr z) (setcdr z nil))) 0)))
     ;; Filter the ignored file extensions. We cannot use modified predicate for this filtering,
     ;; since this breaks the special casing in the `completion-file-name-table' for `file-exists-p'
     ;; and `file-directory-p'.
     (when completing-file
       (setq all (corfu--filter-files all)))
-    (setq all (if-let (sort (corfu--metadata-get metadata 'display-sort-function))
+    (setq all (if-let (sort (corfu--metadata-get 'display-sort-function))
                   (funcall sort all)
                 (sort all #'corfu--sort-predicate)))
     (unless (equal field "")
@@ -536,7 +550,7 @@ completion began less than that number of seconds ago."
       (when (and completing-file (not (string-suffix-p "/" field)))
         (setq all (corfu--move-to-front (concat field "/") all)))
       (setq all (corfu--move-to-front field all)))
-    (list base (length all) all hl metadata)))
+    (list base (length all) all hl corfu--metadata)))
 
 (defun corfu--update-candidates (str pt table pred)
   "Update candidates from STR, PT, TABLE and PRED."
@@ -566,81 +580,84 @@ completion began less than that number of seconds ago."
 (defun corfu--affixate (cands)
   "Annotate CANDS with annotation function."
   (setq cands
-        (if-let (aff (or (corfu--metadata-get corfu--metadata 'affixation-function)
+        (if-let (aff (or (corfu--metadata-get 'affixation-function)
                          (plist-get corfu--extra :affixation-function)))
             (funcall aff cands)
-          (if-let (ann (or (corfu--metadata-get corfu--metadata 'annotation-function)
+          (if-let (ann (or (corfu--metadata-get 'annotation-function)
                            (plist-get corfu--extra :annotation-function)))
-              (mapcar (lambda (cand)
-                        (let ((suffix (or (funcall ann cand) "")))
-                          (list cand ""
-                                ;; The default completion UI adds the `completions-annotations' face
-                                ;; if no other faces are present. We use a custom `corfu-annotations'
-                                ;; face to allow further styling which fits better for popups.
-                                (if (text-property-not-all 0 (length suffix) 'face nil suffix)
-                                    suffix
-                                  (propertize suffix 'face 'corfu-annotations)))))
-                      cands)
-            (mapcar (lambda (cand) (list cand "" "")) cands))))
-  (when-let (dep (plist-get corfu--extra :company-deprecated))
-    (mapc (pcase-lambda ((and x `(,c . ,_)))
-            (when (funcall dep c)
-              (setcar x (setq c (substring c)))
-              (add-face-text-property 0 (length c) 'corfu-deprecated 'append c)))
-          cands))
-  cands)
+              (cl-loop for cand in cands collect
+                       (let ((suffix (or (funcall ann cand) "")))
+                         (list cand ""
+                               ;; The default completion UI adds the `completions-annotations' face
+                               ;; if no other faces are present. We use a custom `corfu-annotations'
+                               ;; face to allow further styling which fits better for popups.
+                               (if (text-property-not-all 0 (length suffix) 'face nil suffix)
+                                   suffix
+                                 (propertize suffix 'face 'corfu-annotations)))))
+            (cl-loop for cand in cands collect (list cand "" "")))))
+  (let ((dep (plist-get corfu--extra :company-deprecated))
+        (kind (and corfu-kind-formatter (plist-get corfu--extra :company-kind))))
+    (cl-loop for x in cands for (c . _) = x do
+             (when kind
+               (setf (cadr x) (funcall corfu-kind-formatter (funcall kind c))))
+             (when (and dep (funcall dep c))
+               (setcar x (setq c (substring c)))
+               (add-face-text-property 0 (length c) 'corfu-deprecated 'append c)))
+    (cons kind cands)))
 
-;; XXX Do not use `completion-metadata-get' in order to avoid Marginalia.
-;; The Marginalia annotators are way to heavy for the Corfu popup!
-(defun corfu--metadata-get (metadata prop)
-  "Return PROP from METADATA."
-  (cdr (assq prop metadata)))
+(defun corfu--metadata-get (prop)
+  "Return PROP from completion metadata."
+  ;; Note: Do not use `completion-metadata-get' in order to avoid Marginalia.
+  ;; The Marginalia annotators are too heavy for the Corfu popup!
+  (cdr (assq prop corfu--metadata)))
 
 (defun corfu--format-candidates (cands)
   "Format annotated CANDS."
   (setq cands
         (cl-loop for c in cands collect
                  (cl-loop for s in c collect
-                          (string-trim (replace-regexp-in-string "[ \t]*\n[ \t]*" " " s)))))
+                          (replace-regexp-in-string "[ \t]*\n[ \t]*" " " s))))
   (let* ((cw (cl-loop for x in cands maximize (string-width (car x))))
          (pw (cl-loop for x in cands maximize (string-width (cadr x))))
          (sw (cl-loop for x in cands maximize (string-width (caddr x))))
-         (pw (if (> pw 0) (1+ pw) 0))
-         (sw (if (> sw 0) (1+ sw) 0))
          (width (+ pw cw sw)))
     (when (< width corfu-min-width)
       (setq cw (+ cw (- corfu-min-width width))
             width corfu-min-width))
     ;; -4 because of margins and some additional safety
     (setq width (min width corfu-max-width (- (frame-width) 4)))
-    (mapcar (pcase-lambda (`(,cand ,prefix ,suffix))
-              (truncate-string-to-width
-               (concat prefix
-                       (make-string (- pw (string-width prefix)) ?\s)
-                       cand
-                       (make-string (+ (- cw (string-width cand))
-                                       (- sw (string-width suffix)))
-                                    ?\s)
-                       suffix)
-               width))
-            cands)))
+    (list pw width
+          (cl-loop for (cand prefix suffix) in cands collect
+                   (truncate-string-to-width
+                    (concat prefix
+                            (make-string (- pw (string-width prefix)) ?\s)
+                            cand
+                            (make-string (+ (- cw (string-width cand))
+                                            (- sw (string-width suffix)))
+                                         ?\s)
+                            suffix)
+                    width)))))
 
 (defun corfu--show-candidates (beg end str)
   "Update display given BEG, END and STR."
-  (let* ((start (min (max 0 (- corfu--index (/ corfu-count 2)))
-                     (max 0 (- corfu--total corfu-count))))
-         (curr (- corfu--index start))
-         (last (min (+ start corfu-count) corfu--total))
-         (bar (ceiling (* corfu-count corfu-count) corfu--total))
-         (lo (min (- corfu-count bar 1) (floor (* corfu-count start) corfu--total)))
-         (cands (funcall corfu--highlight (seq-subseq corfu--candidates start last)))
-         (ann-cands (corfu--format-candidates (corfu--affixate cands))))
+  (pcase-let* ((start (min (max 0 (- corfu--index (/ corfu-count 2)))
+                           (max 0 (- corfu--total corfu-count))))
+               (curr (- corfu--index start))
+               (last (min (+ start corfu-count) corfu--total))
+               (bar (ceiling (* corfu-count corfu-count) corfu--total))
+               (lo (min (- corfu-count bar 1) (floor (* corfu-count start) corfu--total)))
+               (cands (funcall corfu--highlight (seq-subseq corfu--candidates start last)))
+               (`(,kind . ,acands) (corfu--affixate cands))
+               (`(,pw ,width ,fcands) (corfu--format-candidates acands))
+               ;; Disable the left margin if a kind function is specified.
+               (corfu-left-margin-width (if kind 0 corfu-left-margin-width)))
     ;; Nonlinearity at the end and the beginning
     (when (/= start 0)
       (setq lo (max 1 lo)))
     (when (/= last corfu--total)
       (setq lo (min (- corfu-count bar 2) lo)))
-    (corfu--popup-show (+ beg corfu--base) ann-cands curr (and (> corfu--total corfu-count) lo) bar)
+    (corfu--popup-show (+ beg corfu--base) pw width fcands curr
+                       (and (> corfu--total corfu-count) lo) bar)
     (when (>= curr 0)
       (corfu--echo-documentation (nth corfu--index corfu--candidates))
       (corfu--show-overlay beg end str (nth curr cands)))))
@@ -719,7 +736,7 @@ completion began less than that number of seconds ago."
                (if (and corfu--auto-start (numberp corfu-quit-no-match))
                    (< (- (float-time) corfu--auto-start) corfu-quit-no-match)
                  (eq t corfu-quit-no-match))))
-      (corfu--popup-show beg '(#("No match" 0 8 (face italic)))) ;; => Show confirmation popup
+      (corfu--popup-show beg 0 8 '(#("No match" 0 8 (face italic)))) ;; => Confirmation popup
       t))))
 
 (defun corfu--pre-command ()
@@ -962,8 +979,9 @@ completion began less than that number of seconds ago."
       ((and `(,fun ,beg ,end ,table . ,plist)
             (guard (integer-or-marker-p beg))
             (guard (<= beg (point) end))
-            (let len (or (plist-get plist :company-prefix-length) (- (point) beg)))
-            (guard (or (eq len t) (>= len corfu-auto-prefix))))
+            (guard
+             (let ((len (or (plist-get plist :company-prefix-length) (- (point) beg))))
+               (or (eq len t) (>= len corfu-auto-prefix)))))
        (let ((completion-extra-properties plist)
              (completion-in-region-mode-predicate
               (lambda () (eq beg (car-safe (funcall fun))))))
