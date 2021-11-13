@@ -102,12 +102,12 @@ completion began less than that number of seconds ago."
   "Show documentation string in the echo area after that number of seconds."
   :type '(choice boolean float))
 
-(defcustom corfu-kind-formatter nil
-  "Formatting function for candidate kind.
-The function takes a symbol corresponding to the kind of the candidate
-and must return a string. This function can be used to display icons in
-front of the candidates."
-  :type '(choice function (const nil)))
+(defcustom corfu-margin-formatters nil
+  "Registry for margin formatter functions.
+Each function of the list is called until an appropriate formatter is found.
+The function should return a formatter function, which takes the candidate
+string and must return a string, possibly an icon."
+  :type 'hook)
 
 (defcustom corfu-auto-prefix 3
   "Minimum length of prefix for auto completion."
@@ -180,12 +180,12 @@ front of the candidates."
     (define-key map [remap completion-at-point] #'corfu-complete)
     (define-key map [down] #'corfu-next)
     (define-key map [up] #'corfu-previous)
+    (define-key map [remap keyboard-escape-quit] #'corfu-quit)
     ;; XXX [tab] is bound because of org-mode
     ;; The binding should be removed from org-mode-map.
     (define-key map [tab] #'corfu-complete)
     (define-key map "\en" #'corfu-next)
     (define-key map "\ep" #'corfu-previous)
-    (define-key map "\e\e\e" #'corfu-quit)
     (define-key map "\C-g" #'corfu-quit)
     (define-key map "\r" #'corfu-insert)
     (define-key map "\t" #'corfu-complete)
@@ -596,14 +596,14 @@ A scroll bar is displayed from LO to LO+BAR."
                                  (propertize suffix 'face 'corfu-annotations)))))
             (cl-loop for cand in cands collect (list cand "" "")))))
   (let ((dep (plist-get corfu--extra :company-deprecated))
-        (kind (and corfu-kind-formatter (plist-get corfu--extra :company-kind))))
+        (mf (run-hook-with-args-until-success 'corfu-margin-formatters)))
     (cl-loop for x in cands for (c . _) = x do
-             (when kind
-               (setf (cadr x) (funcall corfu-kind-formatter (funcall kind c))))
+             (when mf
+               (setf (cadr x) (funcall mf c)))
              (when (and dep (funcall dep c))
                (setcar x (setq c (substring c)))
                (add-face-text-property 0 (length c) 'corfu-deprecated 'append c)))
-    (cons kind cands)))
+    (cons mf cands)))
 
 (defun corfu--metadata-get (prop)
   "Return PROP from completion metadata."
@@ -632,9 +632,10 @@ A scroll bar is displayed from LO to LO+BAR."
                     (concat prefix
                             (make-string (- pw (string-width prefix)) ?\s)
                             cand
-                            (make-string (+ (- cw (string-width cand))
-                                            (- sw (string-width suffix)))
-                                         ?\s)
+                            (when (/= sw 0)
+                              (make-string (+ (- cw (string-width cand))
+                                              (- sw (string-width suffix)))
+                                           ?\s))
                             suffix)
                     width)))))
 
@@ -647,10 +648,10 @@ A scroll bar is displayed from LO to LO+BAR."
                (bar (ceiling (* corfu-count corfu-count) corfu--total))
                (lo (min (- corfu-count bar 1) (floor (* corfu-count start) corfu--total)))
                (cands (funcall corfu--highlight (seq-subseq corfu--candidates start last)))
-               (`(,kind . ,acands) (corfu--affixate cands))
+               (`(,mf . ,acands) (corfu--affixate cands))
                (`(,pw ,width ,fcands) (corfu--format-candidates acands))
-               ;; Disable the left margin if a kind function is specified.
-               (corfu-left-margin-width (if kind 0 corfu-left-margin-width)))
+               ;; Disable the left margin if a margin formatter is active.
+               (corfu-left-margin-width (if mf 0 corfu-left-margin-width)))
     ;; Nonlinearity at the end and the beginning
     (when (/= start 0)
       (setq lo (max 1 lo)))
@@ -710,34 +711,36 @@ A scroll bar is displayed from LO to LO+BAR."
           (when (and continue (not (equal corfu--input (cons str pt))))
             (corfu--update-candidates str pt table pred)
             nil)
-        (t (message "Corfu completion error: %s" (error-message-string err))
-           nil)))
-     ((and initializing (not corfu--candidates))      ;; 1) Initializing, no candidates
-      (funcall msg "No match")                        ;; => Show error message
-      nil)
-     ((and corfu--candidates                          ;; 2) There exist candidates
-           (not (equal corfu--candidates (list str))) ;; &  Not a sole exactly matching candidate
-           continue)                                  ;; &  Input is non-empty or continue command
-      (corfu--show-candidates beg end str)            ;; => Show candidates popup
-      t)
-     ;; 3) When after `completion-at-point/corfu-complete', no further completion is possible and the
-     ;; current string is a valid match, exit with status 'finished.
+        (error (corfu-quit)
+               (message "Corfu completion error: %s" (error-message-string err)))))
+     ;; 1) Initializing, no candidates => Show error message and quit
+     ((and initializing (not corfu--candidates))
+      (funcall msg "No match")
+      (corfu-quit))
+     ;; 2) There exist candidates
+     ;; &  Not a sole exactly matching candidate
+     ;; &  Input is non-empty or continue command
+     ;; => Show candidates popup
+     ((and corfu--candidates
+           (not (equal corfu--candidates (list str)))
+           continue)
+      (corfu--show-candidates beg end str))
+     ;; 3) When after `completion-at-point/corfu-complete', no further
+     ;; completion is possible and the current string is a valid match, exit
+     ;; with status 'finished.
      ((and (memq this-command '(corfu-complete completion-at-point))
-           (not (stringp (try-completion str table pred)))
-           ;; XXX We should probably use `completion-try-completion' here instead
-           ;; but it does not work as well when completing in `shell-mode'.
-           ;; (not (consp (completion-try-completion str table pred pt metadata)))
+           (not (consp (completion-try-completion str table pred pt corfu--metadata)))
            (test-completion str table pred))
-      (corfu--done str 'finished)
-      nil)
-     ((not (or corfu--candidates                      ;; 4) There are no candidates
+      (corfu--done str 'finished))
+     ;; 4) There are no candidates & corfu-quit-no-match => Confirmation popup
+     ((not (or corfu--candidates
                ;; When `corfu-quit-no-match' is a number of seconds and the auto completion wasn't
                ;; initiated too long ago, quit directly without showing the "No match" popup.
                (if (and corfu--auto-start (numberp corfu-quit-no-match))
                    (< (- (float-time) corfu--auto-start) corfu-quit-no-match)
                  (eq t corfu-quit-no-match))))
-      (corfu--popup-show beg 0 8 '(#("No match" 0 8 (face italic)))) ;; => Confirmation popup
-      t))))
+      (corfu--popup-show beg 0 8 '(#("No match" 0 8 (face italic)))))
+     (t (corfu-quit)))))
 
 (defun corfu--pre-command ()
   "Insert selected candidate unless command is marked to continue completion."
@@ -764,7 +767,8 @@ A scroll bar is displayed from LO to LO+BAR."
                         (<= (line-beginning-position) pt (line-end-position)))
                       (or (not corfu-quit-at-boundary)
                           (funcall completion-in-region-mode--predicate))))
-           (corfu--update #'minibuffer-message))))
+           (corfu--update #'minibuffer-message)
+           t)))
       (corfu-quit)))
 
 (defun corfu--goto (index)
@@ -869,19 +873,9 @@ A scroll bar is displayed from LO to LO+BAR."
                    (str (buffer-substring-no-properties beg end))
                    (metadata (completion-metadata (substring str 0 pt) table pred)))
         (pcase (completion-try-completion str table pred pt metadata)
-          ;; Prefix completion made progress.
           ((and `(,newstr . ,newpt) (guard (not (equal str newstr))))
            (completion--replace beg end newstr)
-           (goto-char (+ beg newpt)))
-          ;; If we didn't make progress, the last command was `corfu-complete'
-          ;; and we are not at completion boundary, continue with the first candidate.
-          ((guard (and (eq last-command #'corfu-complete)
-                       (> (length str) corfu--base)
-                       (> corfu--total 0)))
-           (completion--replace beg end
-                                (concat (substring str 0 corfu--base)
-                                        (substring-no-properties
-                                         (car corfu--candidates))))))))))
+           (goto-char (+ beg newpt))))))))
 
 (defun corfu--insert (status)
   "Insert current candidate, exit with STATUS if non-nil."
@@ -990,8 +984,7 @@ A scroll bar is displayed from LO to LO+BAR."
                corfu--auto-start (float-time))
          (completion-in-region-mode 1)
          (corfu--setup)
-         (unless (corfu--update #'ignore)
-           (corfu-quit)))))))
+         (corfu--update #'ignore))))))
 
 (defun corfu--auto-post-command ()
   "Post command hook which initiates auto completion."
