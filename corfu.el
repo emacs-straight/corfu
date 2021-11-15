@@ -71,9 +71,13 @@ The value should lie between 0 and corfu-count/2."
   "Continue Corfu completion after executing these commands."
   :type '(repeat (choice regexp symbol)))
 
-(defcustom corfu-commit-predicate #'corfu-candidate-selected-p
+(defcustom corfu-commit-predicate #'corfu-candidate-previewed-p
   "Automatically commit if the predicate returns t."
   :type '(choice (const nil) function))
+
+(defcustom corfu-preview-current t
+  "Preview currently selected candidate."
+  :type 'boolean)
 
 (defcustom corfu-quit-at-boundary nil
   "Automatically quit at completion field/word boundary.
@@ -136,11 +140,12 @@ string and must return a string, possibly an icon."
   :group 'corfu
   :group 'faces)
 
-(defface corfu-background
+(defface corfu-default
   '((((class color) (min-colors 88) (background dark)) :background "#191a1b")
     (((class color) (min-colors 88) (background light)) :background "#f0f0f0")
     (t :background "gray"))
-  "Face used for the popup background.")
+  "Default face used for the popup, in particular the background and foreground color.")
+(define-obsolete-face-alias 'corfu-background 'corfu-default "0.14")
 
 (defface corfu-current
   '((((class color) (min-colors 88) (background dark))
@@ -226,7 +231,7 @@ string and must return a string, possibly an icon."
 (defvar-local corfu--input nil
   "Cons of last prompt contents and point or t.")
 
-(defvar-local corfu--overlay nil
+(defvar-local corfu--preview-ov nil
   "Current candidate overlay.")
 
 (defvar-local corfu--extra nil
@@ -249,7 +254,7 @@ string and must return a string, possibly an icon."
     corfu--scroll
     corfu--input
     corfu--total
-    corfu--overlay
+    corfu--preview-ov
     corfu--extra
     corfu--auto-start
     corfu--echo-timer
@@ -323,7 +328,8 @@ string and must return a string, possibly an icon."
       (use-local-map corfu--mouse-ignore-map)
       (dolist (var corfu--buffer-parameters)
         (set (make-local-variable (car var)) (cdr var)))
-      (setq-local face-remapping-alist fr)
+      (setq-local face-remapping-alist (copy-tree fr))
+      (cl-pushnew 'corfu-default (alist-get 'default face-remapping-alist))
       (let ((inhibit-modification-hooks t)
             (inhibit-read-only t))
         (erase-buffer)
@@ -379,7 +385,7 @@ string and must return a string, possibly an icon."
 	   (new (face-attribute 'corfu-border :background nil 'default)))
       (unless (equal (face-attribute face :background corfu--frame 'default) new)
 	(set-face-background face new corfu--frame)))
-    (let ((new (face-attribute 'corfu-background :background nil 'default)))
+    (let ((new (face-attribute 'corfu-default :background nil 'default)))
       (unless (equal (frame-parameter corfu--frame 'background-color) new)
 	(set-frame-parameter corfu--frame 'background-color new)))
     (let ((win (frame-root-window corfu--frame)))
@@ -570,6 +576,7 @@ A scroll bar is displayed from LO to LO+BAR."
            corfu--candidates candidates
            corfu--base base
            corfu--total total
+           corfu--index -1
            corfu--highlight hl
            corfu--metadata metadata))))
 
@@ -656,15 +663,14 @@ A scroll bar is displayed from LO to LO+BAR."
                              (max 0 (+ corfu--index off 1 (- corfu-count))
                                   (min (- corfu--index off corr) corfu--scroll))))))
 
-(defun corfu--show-candidates (beg end str)
-  "Update display given BEG, END and STR."
+(defun corfu--candidates-popup (pos)
+  "Show candidates popup at POS."
   (corfu--update-scroll)
-  (pcase-let* ((curr (- corfu--index corfu--scroll))
-               (last (min (+ corfu--scroll corfu-count) corfu--total))
+  (pcase-let* ((last (min (+ corfu--scroll corfu-count) corfu--total))
                (bar (ceiling (* corfu-count corfu-count) corfu--total))
                (lo (min (- corfu-count bar 1) (floor (* corfu-count corfu--scroll) corfu--total)))
-               (cands (funcall corfu--highlight (seq-subseq corfu--candidates corfu--scroll last)))
-               (`(,mf . ,acands) (corfu--affixate cands))
+               (`(,mf . ,acands) (corfu--affixate (funcall corfu--highlight
+                                   (seq-subseq corfu--candidates corfu--scroll last))))
                (`(,pw ,width ,fcands) (corfu--format-candidates acands))
                ;; Disable the left margin if a margin formatter is active.
                (corfu-left-margin-width (if mf 0 corfu-left-margin-width)))
@@ -673,18 +679,16 @@ A scroll bar is displayed from LO to LO+BAR."
       (setq lo (max 1 lo)))
     (when (/= last corfu--total)
       (setq lo (min (- corfu-count bar 2) lo)))
-    (corfu--popup-show (+ beg corfu--base) pw width fcands curr
-                       (and (> corfu--total corfu-count) lo) bar)
-    (when (>= curr 0)
-      (corfu--echo-documentation (nth corfu--index corfu--candidates))
-      (corfu--show-overlay beg end str (nth curr cands)))))
+    (corfu--popup-show (+ pos corfu--base) pw width fcands (- corfu--index corfu--scroll)
+                       (and (> corfu--total corfu-count) lo) bar)))
 
-(defun corfu--show-overlay (beg end str cand)
+(defun corfu--preview-current (beg end str cand)
   "Show current CAND as overlay given BEG, END and STR."
-  (setq corfu--overlay (make-overlay beg end nil t t))
-  (overlay-put corfu--overlay 'priority 1000)
-  (overlay-put corfu--overlay 'window (selected-window))
-  (overlay-put corfu--overlay 'display (concat (substring str 0 corfu--base) cand)))
+  (when corfu-preview-current
+    (setq corfu--preview-ov (make-overlay beg end nil t t))
+    (overlay-put corfu--preview-ov 'priority 1000)
+    (overlay-put corfu--preview-ov 'window (selected-window))
+    (overlay-put corfu--preview-ov 'display (concat (substring str 0 corfu--base) cand))))
 
 (defun corfu--echo (msg)
   "Show MSG in echo area."
@@ -711,9 +715,9 @@ A scroll bar is displayed from LO to LO+BAR."
                (continue (or (/= beg end)
                              (corfu--match-symbol-p corfu-continue-commands
                                                     this-command))))
-    (when corfu--overlay
-      (delete-overlay corfu--overlay)
-      (setq corfu--overlay nil))
+    (when corfu--preview-ov
+      (delete-overlay corfu--preview-ov)
+      (setq corfu--preview-ov nil))
     (when corfu--echo-timer
       (cancel-timer corfu--echo-timer)
       (setq corfu--echo-timer nil))
@@ -740,7 +744,10 @@ A scroll bar is displayed from LO to LO+BAR."
      ((and corfu--candidates
            (not (equal corfu--candidates (list str)))
            continue)
-      (corfu--show-candidates beg end str))
+      (corfu--candidates-popup beg)
+      (when (>= corfu--index 0)
+        (corfu--echo-documentation (nth corfu--index corfu--candidates))
+        (corfu--preview-current beg end str (nth corfu--index corfu--candidates))))
      ;; 3) When after `completion-at-point/corfu-complete', no further
      ;; completion is possible and the current string is a valid match, exit
      ;; with status 'finished.
@@ -761,14 +768,15 @@ A scroll bar is displayed from LO to LO+BAR."
 (defun corfu--pre-command ()
   "Insert selected candidate unless command is marked to continue completion."
   (add-hook 'window-configuration-change-hook #'corfu-quit)
-  (unless (corfu--match-symbol-p corfu-continue-commands this-command)
-    (if (and corfu-commit-predicate (funcall corfu-commit-predicate))
-        (corfu--insert 'exact)
-      (setq corfu--index -1))))
+  (when (and corfu-commit-predicate
+             (not (corfu--match-symbol-p corfu-continue-commands this-command))
+             (funcall corfu-commit-predicate))
+    (corfu--insert 'exact)))
 
-(defun corfu-candidate-selected-p ()
-  "Return t if a candidate is selected."
-  (>= corfu--index 0))
+(defun corfu-candidate-previewed-p ()
+  "Return t if a candidate is selected and previewed."
+  (and corfu-preview-current (>= corfu--index 0)))
+(define-obsolete-function-alias 'corfu-candidate-selected-p 'corfu-candidate-previewed-p "0.14")
 
 (defun corfu--post-command ()
   "Refresh Corfu after last command."
@@ -957,7 +965,7 @@ A scroll bar is displayed from LO to LO+BAR."
   (remove-hook 'window-configuration-change-hook #'corfu-quit)
   (remove-hook 'pre-command-hook #'corfu--pre-command 'local)
   (remove-hook 'post-command-hook #'corfu--post-command 'local)
-  (when corfu--overlay (delete-overlay corfu--overlay))
+  (when corfu--preview-ov (delete-overlay corfu--preview-ov))
   (when corfu--echo-timer (cancel-timer corfu--echo-timer))
   (mapc #'kill-local-variable corfu--state-vars))
 
