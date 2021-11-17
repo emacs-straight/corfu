@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.14
+;; Version: 0.15
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -113,9 +113,10 @@ completion began less than that number of seconds ago."
 
 (defcustom corfu-margin-formatters nil
   "Registry for margin formatter functions.
-Each function of the list is called until an appropriate formatter is found.
-The function should return a formatter function, which takes the candidate
-string and must return a string, possibly an icon."
+Each function of the list is called with the completion metadata as
+argument until an appropriate formatter is found. The function should
+return a formatter function, which takes the candidate string and must
+return a string, possibly an icon."
   :type 'hook)
 
 (defcustom corfu-auto-prefix 3
@@ -611,8 +612,9 @@ A scroll bar is displayed from LO to LO+BAR."
                                    suffix
                                  (propertize suffix 'face 'corfu-annotations)))))
             (cl-loop for cand in cands collect (list cand "" "")))))
-  (let ((dep (plist-get corfu--extra :company-deprecated))
-        (mf (run-hook-with-args-until-success 'corfu-margin-formatters)))
+  (let* ((dep (plist-get corfu--extra :company-deprecated))
+         (completion-extra-properties corfu--extra)
+         (mf (run-hook-with-args-until-success 'corfu-margin-formatters corfu--metadata)))
     (cl-loop for x in cands for (c . _) = x do
              (when mf
                (setf (cadr x) (funcall mf c)))
