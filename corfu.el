@@ -191,7 +191,7 @@ return a string, possibly an icon."
     (define-key map [remap completion-at-point] #'corfu-complete)
     (define-key map [down] #'corfu-next)
     (define-key map [up] #'corfu-previous)
-    (define-key map [remap keyboard-escape-quit] #'corfu-quit)
+    (define-key map [remap keyboard-escape-quit] #'corfu-reset)
     ;; XXX [tab] is bound because of org-mode
     ;; The binding should be removed from org-mode-map.
     (define-key map [tab] #'corfu-complete)
@@ -238,6 +238,9 @@ return a string, possibly an icon."
 (defvar-local corfu--extra nil
   "Extra completion properties.")
 
+(defvar-local corfu--change-group nil
+  "Undo change group.")
+
 (defvar-local corfu--auto-start nil
   "Auto completion start time.")
 
@@ -259,6 +262,7 @@ return a string, possibly an icon."
     corfu--extra
     corfu--auto-start
     corfu--echo-timer
+    corfu--change-group
     corfu--metadata)
   "Buffer-local state variables used by Corfu.")
 
@@ -594,6 +598,20 @@ A scroll bar is displayed from LO to LO+BAR."
   (interactive)
   (completion-in-region-mode -1))
 
+(defun corfu-reset ()
+  "Reset Corfu completion.
+This command can be executed multiple times consecutively by hammering the ESC
+key. If a candidate is selected, unselect the candidate. Otherwise reset the
+input. If there hasn't been any input, then quit."
+  (interactive)
+  (if (>= corfu--index 0)
+      (corfu--goto -1)
+    (let ((quit (eq buffer-undo-list (cdar corfu--change-group)))) ;; Change group is empty
+      ;; Cancel all changes and start new change group.
+      (cancel-change-group corfu--change-group)
+      (activate-change-group (setq corfu--change-group (prepare-change-group)))
+      (when quit (corfu-quit)))))
+
 (defun corfu--affixate (cands)
   "Annotate CANDS with annotation function."
   (setq cands
@@ -843,7 +861,7 @@ A scroll bar is displayed from LO to LO+BAR."
         (restore (make-symbol "corfu--restore")))
     (fset restore
           (lambda ()
-            (when (eq this-command #'corfu-quit)
+            (when (memq this-command '(corfu-quit corfu-reset))
               (setq this-command #'ignore))
             (remove-hook 'pre-command-hook restore)
             (setq other-window-scroll-buffer other)
@@ -926,10 +944,13 @@ A scroll bar is displayed from LO to LO+BAR."
 
 (defun corfu--done (str status)
   "Call the `:exit-function' with STR and STATUS and exit completion."
-  ;; XXX Is the :exit-function handling sufficient?
-  (when-let (exit (plist-get corfu--extra :exit-function))
-    (funcall exit str status))
-  (corfu-quit))
+  (let ((exit (plist-get corfu--extra :exit-function)))
+    ;; For successfull completions, amalgamate undo operations,
+    ;; such that completion can be undone in a single step.
+    (undo-amalgamate-change-group corfu--change-group)
+    (corfu-quit)
+    ;; XXX Is the :exit-function handling sufficient?
+    (when exit (funcall exit str status))))
 
 (defun corfu-insert ()
   "Insert current candidate."
@@ -942,6 +963,7 @@ A scroll bar is displayed from LO to LO+BAR."
   "Setup Corfu completion state."
   (when completion-in-region-mode
     (setq corfu--extra completion-extra-properties)
+    (activate-change-group (setq corfu--change-group (prepare-change-group)))
     (setcdr (assq #'completion-in-region-mode minor-mode-overriding-map-alist) corfu-map)
     (add-hook 'pre-command-hook #'corfu--pre-command nil 'local)
     (add-hook 'post-command-hook #'corfu--post-command nil 'local)
@@ -969,6 +991,7 @@ A scroll bar is displayed from LO to LO+BAR."
   (remove-hook 'post-command-hook #'corfu--post-command 'local)
   (when corfu--preview-ov (delete-overlay corfu--preview-ov))
   (when corfu--echo-timer (cancel-timer corfu--echo-timer))
+  (accept-change-group corfu--change-group)
   (mapc #'kill-local-variable corfu--state-vars))
 
 (defun corfu--completion-in-region (&rest args)
@@ -1008,6 +1031,7 @@ A scroll bar is displayed from LO to LO+BAR."
          (setq completion-in-region--data `(,(copy-marker beg) ,(copy-marker end t)
                                             ,table ,(plist-get plist :predicate))
                corfu--auto-start (float-time))
+         (undo-boundary) ;; Necessary to support `corfu-reset'
          (completion-in-region-mode 1)
          (corfu--setup)
          (corfu--update #'ignore))))))
@@ -1071,7 +1095,7 @@ The ORIG function takes the FUN and WHICH arguments."
     (corfu-mode 1)))
 
 ;; Emacs 28: Do not show Corfu commands with M-X
-(dolist (sym '(corfu-next corfu-previous corfu-first corfu-last corfu-quit
+(dolist (sym '(corfu-next corfu-previous corfu-first corfu-last corfu-quit corfu-reset
                corfu-complete corfu-insert corfu-scroll-up corfu-scroll-down
                corfu-show-location corfu-show-documentation))
   (put sym 'completion-predicate #'ignore))
