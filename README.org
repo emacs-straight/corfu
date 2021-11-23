@@ -25,7 +25,9 @@
 
   Corfu does not include custom completion backends. In contrast, the complex
   Company package includes custom completion backends, which deviate from the
-  Emacs completion infrastructure.
+  Emacs completion infrastructure. The Emacs built-in Capfs are mostly
+  sufficient, but a few additional Capfs and completion functions are provided
+  by the [[https://github.com/minad/cape][Cape]] package.
 
   *NOTE*: Corfu uses child frames to show the popup; on non-graphical displays it
   will fall back to the default setting of the ~completion-in-region-function~.
@@ -175,10 +177,9 @@
     maintain a history (See branch =history= for a possible solution).
   - There is currently no equivalent for =company-quickhelp=. Documentation and source
     can be opened manually in a separate buffer.
-  - Company has the ability to merge and present the candidates of multiple backends
-    at the same time in some limited scenarios. This feature is currently missing
-    in the Capf backend mechanism, but it should be possible to implement a super Capf,
-    which can merge multiple Capfs.
+  - Company has the ability to merge/group the candidates of multiple backends
+    in some scenarios. This feature is implemented by the experimental function
+    ~cape-merge-capfs~ of the [[https://github.com/minad/cape][Cape]] package.
 
 * Contributions
 
