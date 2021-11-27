@@ -6,6 +6,7 @@
 #+texinfo_dir_title: Corfu: (corfu).
 #+texinfo_dir_desc: Completion Overlay Region FUnction
 
+#+html: <a href="https://www.gnu.org/software/emacs/"><img alt="GNU Emacs" src="https://github.com/minad/corfu/blob/screenshots/emacs.svg?raw=true"/></a>
 #+html: <a href="http://elpa.gnu.org/packages/corfu.html"><img alt="GNU ELPA" src="https://elpa.gnu.org/packages/corfu.svg"/></a>
 #+html: <a href="http://elpa.gnu.org/devel/corfu.html"><img alt="GNU-devel ELPA" src="https://elpa.gnu.org/devel/corfu.svg"/></a>
 
@@ -60,11 +61,15 @@
   Corfu is available from [[http://elpa.gnu.org/packages/corfu.html][GNU ELPA]], such that it can be installed directly via
   ~package-install~. After installation, the global minor mode can be enabled with
   =M-x corfu-global-mode=. In order to configure Corfu and other packages in your
-  init.el, you may want to use ~use-package~. Corfu is highly flexible and
-  customizable via ~corfu-*~ customization variables. For filtering I recommend to
-  give Orderless completion a try, which is different from the familiar prefix
-  TAB completion. Corfu can be used with the default completion styles, the use
-  of Orderless is not a necessity. Here is an example configuration:
+  init.el, you may want to use ~use-package~.
+
+  Corfu is highly flexible and customizable via ~corfu-*~ customization variables.
+  For filtering I recommend to give Orderless completion a try, which is
+  different from the familiar prefix TAB completion. Corfu can be used with the
+  default completion styles, the use of Orderless is not a necessity. See also
+  the [[https://github.com/minad/corfu/wiki][Corfu Wiki]] for additional configuration tips.
+
+  Here is an example configuration:
 
   #+begin_src emacs-lisp
     (use-package corfu
@@ -75,16 +80,10 @@
       ;; (corfu-commit-predicate nil)   ;; Do not commit selected candidates on next input
       ;; (corfu-quit-at-boundary t)     ;; Automatically quit at word boundary
       ;; (corfu-quit-no-match t)        ;; Automatically quit if there is no match
-      ;; (corfu-echo-documentation nil) ;; Do not show documentation in the echo area
+      ;; (corfu-preview-current nil)    ;; Disable current candidate preview
+      ;; (corfu-preselect-first nil)    ;; Disable candidate preselection
+      ;; (corfu-echo-documentation nil) ;; Disable documentation in the echo area
       ;; (corfu-scroll-margin 5)        ;; Use scroll margin
-      ;; (corfu-preview-current nil)    ;; Do not preview current candidate
-
-      ;; Optionally use TAB for cycling, default is `corfu-complete'.
-      ;; :bind (:map corfu-map
-      ;;        ("TAB" . corfu-next)
-      ;;        ([tab] . corfu-next)
-      ;;        ("S-TAB" . corfu-previous)
-      ;;        ([backtab] . corfu-previous))
 
       ;; You may want to enable Corfu only for certain modes.
       ;; :hook ((prog-mode . corfu-mode)
@@ -131,7 +130,29 @@
       (setq tab-always-indent 'complete))
   #+end_src
 
-  See also the [[https://github.com/minad/corfu/wiki][Corfu Wiki]] for additional configuration tips.
+** TAB-and-Go completion
+
+You may be interested in configuring Corfu in TAB-and-Go style. Pressing TAB
+moves to the next candidate and further input will then commit the selection.
+
+#+begin_src emacs-lisp
+  (use-package corfu
+    ;; TAB-and-Go customizations
+    :custom
+    (corfu-cycle t)             ;; Enable cycling for `corfu-next/previous'
+    (corfu-preselect-first nil) ;; Disable candidate preselection
+
+    ;; Use TAB for cycling, default is `corfu-complete'.
+    :bind
+    (:map corfu-map
+          ("TAB" . corfu-next)
+          ([tab] . corfu-next)
+          ("S-TAB" . corfu-previous)
+          ([backtab] . corfu-previous))
+
+    :init
+    (corfu-global-mode))
+#+end_src
 
 * Key bindings
 
@@ -181,7 +202,7 @@
     can be opened manually in a separate buffer.
   - Company has the ability to merge/group the candidates of multiple backends
     in some scenarios. This feature is implemented by the experimental function
-    ~cape-merge-capfs~ of the [[https://github.com/minad/cape][Cape]] package.
+    ~cape-super-capf~ of the [[https://github.com/minad/cape][Cape]] package.
 
 * Contributions
 

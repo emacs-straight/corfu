@@ -79,6 +79,10 @@ The value should lie between 0 and corfu-count/2."
   "Preview currently selected candidate."
   :type 'boolean)
 
+(defcustom corfu-preselect-first t
+  "Preselect first candidate."
+  :type 'boolean)
+
 (defcustom corfu-quit-at-boundary nil
   "Automatically quit at completion field/word boundary.
 If automatic quitting is disabled, Orderless filter strings with spaces
@@ -127,7 +131,9 @@ return a string, possibly an icon."
           (function :tag "Custom function")))
 
 (defcustom corfu-auto-prefix 3
-  "Minimum length of prefix for auto completion."
+  "Minimum length of prefix for auto completion.
+The completion backend can override this with
+:company-prefix-length."
   :type 'integer)
 
 (defcustom corfu-auto-delay 0.2
@@ -297,6 +303,8 @@ return a string, possibly an icon."
     (tool-bar-lines . 0)
     (tab-bar-lines . 0)
     (no-other-frame . t)
+    (no-other-window . t)
+    (no-delete-other-windows . t)
     (unsplittable . t)
     (undecorated . t)
     (cursor-type . nil)
@@ -410,10 +418,7 @@ return a string, possibly an icon."
     (let ((win (frame-root-window corfu--frame)))
       (set-window-buffer win buffer)
       ;; Mark window as dedicated to prevent frame reuse (#60)
-      (set-window-dedicated-p win t)
-      ;; Disallow selection of root window (#63)
-      (set-window-parameter win 'no-delete-other-windows t)
-      (set-window-parameter win 'no-other-window t))
+      (set-window-dedicated-p win t))
     ;; XXX HACK Make the frame invisible before moving the popup in order to avoid flicker.
     (unless (eq (cdr (frame-position corfu--frame)) y)
       (make-frame-invisible corfu--frame))
@@ -564,10 +569,7 @@ A scroll bar is displayed from LO to LO+BAR."
                ;; if the cursor is moved between the slashes of "~//".
                ;; See also vertico.el which has the same issue.
                (bounds (or (condition-case nil
-                               (completion-boundaries before
-                                                      table
-                                                      pred
-                                                      after)
+                               (completion-boundaries before table pred after)
                              (t (cons 0 (length after))))))
                (field (substring str (car bounds) (+ pt (cdr bounds))))
                (completing-file (eq (corfu--metadata-get 'category) 'file))
@@ -586,7 +588,7 @@ A scroll bar is displayed from LO to LO+BAR."
     (list base all (length all) hl corfu--metadata
           ;; Select the prompt when the input is a valid completion
           ;; and if it is not equal to the first candidate.
-          (if (or (not all)
+          (if (or (not corfu-preselect-first) (not all)
                   (and (not (equal field (car all)))
                        (not (and completing-file (equal (concat field "/") (car all))))
                        (test-completion str table pred)))
@@ -806,14 +808,7 @@ there hasn't been any input, then quit."
       (corfu--candidates-popup beg)
       (corfu--echo-documentation)
       (corfu--preview-current beg end str))
-     ;; 4) When after `corfu-complete', no further
-     ;; completion is possible and the current string is a valid match, exit
-     ;; with status 'finished.
-     ((and (eq this-command #'corfu-complete)
-           (not (consp (completion-try-completion str table pred pt corfu--metadata)))
-           (test-completion str table pred))
-      (corfu--done str 'finished))
-     ;; 5) There are no candidates & corfu-quit-no-match => Confirmation popup
+     ;; 4) There are no candidates & corfu-quit-no-match => Confirmation popup
      ((not (or corfu--candidates
                ;; When `corfu-quit-no-match' is a number of seconds and the auto completion wasn't
                ;; initiated too long ago, quit directly without showing the "No match" popup.
@@ -950,28 +945,38 @@ there hasn't been any input, then quit."
   "Try to complete current input."
   (interactive)
   (pcase-let ((`(,beg ,end ,table ,pred) completion-in-region--data))
-    (cond
-     ;; Proceed with cycling
-     (completion-cycling
-      (let ((completion-extra-properties corfu--extra))
-        (corfu--completion-in-region beg end table pred)))
-     ;; Continue completion with selected candidate
-     ((>= corfu--index 0) (corfu--insert nil))
-     ;; Try to complete the current input string
-     (t (let* ((pt (max 0 (- (point) beg)))
+    (if completion-cycling
+        ;; Proceed with cycling
+        (let ((completion-extra-properties corfu--extra))
+          (corfu--completion-in-region beg end table pred))
+      (if (>= corfu--index 0)
+          ;; Continue completion with selected candidate
+          (corfu--insert nil)
+        ;; Try to complete the current input string
+        (let* ((pt (max 0 (- (point) beg)))
                (str (buffer-substring-no-properties beg end))
                (metadata (completion-metadata (substring str 0 pt) table pred)))
           (pcase (completion-try-completion str table pred pt metadata)
             (`(,newstr . ,newpt)
              (completion--replace beg end newstr)
-             (goto-char (+ beg newpt)))))))))
+             (goto-char (+ beg newpt))))))
+      ;; No further completion is possible and the current string is a valid
+      ;; match, exit with status 'finished.
+      (let* ((pt (max 0 (- (point) beg)))
+             (str (buffer-substring-no-properties beg end))
+             (metadata (completion-metadata (substring str 0 pt) table pred)))
+        (when (and (not (consp (completion-try-completion str table pred pt metadata)))
+                   (test-completion str table pred))
+          (corfu--done str 'finished))))))
 
 (defun corfu--insert (status)
   "Insert current candidate, exit with STATUS if non-nil."
-  (pcase-let* ((`(,beg ,end . ,_) completion-in-region--data)
+  (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
                (str (buffer-substring-no-properties beg end)))
-    ;; Replace if candidate is selected.
-    (when (>= corfu--index 0)
+    ;; Replace if candidate is selected or if current input is not valid completion.
+    ;; For example str can be a valid path, e.g., ~/dir/.
+    (when (or (>= corfu--index 0) (equal str "")
+              (not (test-completion str table pred)))
       ;; XXX There is a small bug here, depending on interpretation.
       ;; When completing "~/emacs/master/li|/calc" where "|" is the
       ;; cursor, then the candidate only includes the prefix
@@ -979,7 +984,7 @@ there hasn't been any input, then quit."
       ;; completion has the same problem when selecting in the
       ;; *Completions* buffer. See bug#48356.
       (setq str (concat (substring str 0 corfu--base)
-                        (substring-no-properties (nth corfu--index corfu--candidates))))
+                        (substring-no-properties (nth (max 0 corfu--index) corfu--candidates))))
       (completion--replace beg end str)
       (corfu--goto -1)) ;; Reset selection, but continue completion.
     (when status (corfu--done str status)))) ;; Exit with status
