@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.15
+;; Version: 0.16
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -1099,8 +1099,9 @@ there hasn't been any input, then quit."
   (setq corfu--auto-timer nil)
   (when (and (not completion-in-region-mode)
              (eq (current-buffer) buffer))
-    (pcase (run-hook-wrapped 'completion-at-point-functions
-                             #'completion--capf-wrapper 'all)
+    (pcase (while-no-input ;; Interruptible capf query
+             (run-hook-wrapped 'completion-at-point-functions
+                               #'completion--capf-wrapper 'all))
       ((and `(,fun ,beg ,end ,table . ,plist)
             (guard (integer-or-marker-p beg))
             (guard (<= beg (point) end))
@@ -1126,9 +1127,11 @@ there hasn't been any input, then quit."
   (when (and (not completion-in-region-mode)
              (corfu--match-symbol-p corfu-auto-commands this-command)
              (display-graphic-p))
-    (setq corfu--auto-timer (run-with-idle-timer corfu-auto-delay nil
-                                                 #'corfu--auto-complete
-                                                 (current-buffer)))))
+    ;; NOTE: Do not use idle timer since this leads to unacceptable slowdowns,
+    ;; in particular if flyspell-mode is enabled.
+    (setq corfu--auto-timer (run-at-time corfu-auto-delay nil
+                                         #'corfu--auto-complete
+                                         (current-buffer)))))
 
 ;;;###autoload
 (define-minor-mode corfu-mode
@@ -1149,23 +1152,26 @@ there hasn't been any input, then quit."
     (remove-hook 'post-command-hook #'corfu--auto-post-command 'local)
     (kill-local-variable 'completion-in-region-function))))
 
+(defun corfu--capf-wrapper (fun)
+  "Wrapper for `completion-at-point' FUN.
+Determines if the capf is applicable at the current position."
+  (pcase (funcall fun)
+    ((and res `(,beg ,end ,table . ,plist))
+     (and (integer-or-marker-p beg) ;; Valid capf result
+          (<= beg (point) end) ;; Sanity checking
+          ;; For non-exclusive capfs, check for valid completion.
+          (or (not (eq 'no (plist-get plist :exclusive)))
+              (let* ((str (buffer-substring-no-properties beg end))
+                     (pt (- (point) beg))
+                     (pred (plist-get plist :predicate))
+                     (md (completion-metadata (substring str 0 pt) table pred)))
+                (completion-try-completion str table pred pt md)))
+          (cons fun res)))))
+
 (defun corfu--capf-wrapper-advice (orig fun which)
   "Around advice for `completion--capf-wrapper'.
 The ORIG function takes the FUN and WHICH arguments."
-  (if corfu-mode ;; Only enable the advice when Corfu is active
-      (let ((res (funcall fun)))
-        (when (and (consp res) (integer-or-marker-p (car res)) ;; Valid capf result
-                   (pcase-let ((`(,beg ,end ,table . ,plist) res))
-                     (and (<= beg (point) end) ;; Sanity checking
-                          ;; For non-exclusive capfs, check for valid completion.
-                          (or (not (eq 'no (plist-get plist :exclusive)))
-                              (let* ((str (buffer-substring-no-properties beg end))
-                                     (pt (- (point) beg))
-                                     (pred (plist-get plist :predicate))
-                                     (md (completion-metadata (substring str 0 pt) table pred)))
-                                (completion-try-completion str table pred pt md))))))
-          (cons fun res)))
-    (funcall orig fun which)))
+  (if corfu-mode (corfu--capf-wrapper fun) (funcall orig fun which)))
 
 ;;;###autoload
 (define-globalized-minor-mode corfu-global-mode corfu-mode corfu--on :group 'corfu)
