@@ -424,7 +424,10 @@ The completion backend can override this with
       (make-frame-invisible corfu--frame))
     (set-frame-position corfu--frame x y)
     (set-frame-size corfu--frame width height t)
-    (make-frame-visible corfu--frame)))
+    (make-frame-visible corfu--frame)
+    ;; HACK: Force redisplay, otherwise the popup somtimes
+    ;; does not display content.
+    (redisplay)))
 
 (defun corfu--popup-show (pos off width lines &optional curr lo bar)
   "Show LINES as popup at POS - OFF.
