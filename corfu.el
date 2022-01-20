@@ -419,13 +419,16 @@ The completion backend can override this with
       (set-window-buffer win buffer)
       ;; Mark window as dedicated to prevent frame reuse (#60)
       (set-window-dedicated-p win t))
-    ;; XXX HACK Make the frame invisible before moving the popup in order to avoid flicker.
-    (unless (eq (cdr (frame-position corfu--frame)) y)
-      (make-frame-invisible corfu--frame))
-    (set-frame-position corfu--frame x y)
     (set-frame-size corfu--frame width height t)
-    (unless (frame-visible-p corfu--frame)
+    (if (frame-visible-p corfu--frame)
+        ;; XXX HACK Avoid flicker when frame is already visible.
+        ;; Redisplay, wait for resize and then move the frame.
+        (unless (equal (frame-position corfu--frame) (cons x y))
+          (redisplay)
+          (sleep-for 0.01)
+          (set-frame-position corfu--frame x y))
       ;; XXX HACK: Force redisplay, otherwise the popup sometimes does not display content.
+      (set-frame-position corfu--frame x y)
       (redisplay)
       (make-frame-visible corfu--frame))))
 
@@ -1086,17 +1089,22 @@ there hasn't been any input, then quit."
                    ((symbol-function #'completion-all-sorted-completions)
                     #'corfu--all-sorted-completions))
           (apply #'completion--in-region args))
-        (when (and completion-in-region-mode
-                   ;; Do not show Corfu when "trivially" cycling, i.e.,
-                   ;; when the completion is finished after the candidate.
-                   (not (and completion-cycling
-                             (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
-                                          (pt (max 0 (- (point) beg)))
-                                          (str (buffer-substring-no-properties beg end))
-                                          (before (substring str 0 pt))
-                                          (after (substring str pt)))
-                               (equal (completion-boundaries before table pred after) '(0 . 0))))))
-          (corfu--setup)))))
+      (when (and completion-in-region-mode
+                 ;; Terminate immediately when the completion boundary changed.
+                 ;; This happens for example when completing file names in shell
+                 ;; and the terminating space is added by the :exit-function.
+                 (or (funcall completion-in-region-mode--predicate)
+                     (and (completion-in-region-mode -1) nil))
+                 ;; Do not show Corfu when "trivially" cycling, i.e.,
+                 ;; when the completion is finished after the candidate.
+                 (not (and completion-cycling
+                           (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
+                                        (pt (max 0 (- (point) beg)))
+                                        (str (buffer-substring-no-properties beg end))
+                                        (before (substring str 0 pt))
+                                        (after (substring str pt)))
+                             (equal (completion-boundaries before table pred after) '(0 . 0))))))
+        (corfu--setup)))))
 
 (defun corfu--auto-complete (buf tick pt)
   "Initiate auto completion if BUF, TICK and PT did not change."
