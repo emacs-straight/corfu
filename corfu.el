@@ -1088,7 +1088,7 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
                           ; return 'finished. Otherwise return 'exact.
                           (if (eq (try-completion (car candidates) table pred) t)
                           'finished 'exact)))
-             (if (or (not threshold) (< threshold total))
+             (if (not (and threshold (or (eq threshold t) (>= threshold total))))
                  (corfu--setup)
                (corfu--cycle-candidates total candidates (+ base beg) end)
                ;; Do not show Corfu when "trivially" cycling, i.e.,
@@ -1119,11 +1119,10 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
     (define-key map (vector last-command-event) replace)
     (funcall replace)))
 
-(defun corfu--auto-complete (buf tick pt)
-  "Initiate auto completion if BUF, TICK and PT did not change."
+(defun corfu--auto-complete (tick)
+  "Initiate auto completion if TICK did not change."
   (setq corfu--auto-timer nil)
-  (when (and (not completion-in-region-mode) (eq buf (current-buffer))
-             (eq tick (buffer-chars-modified-tick)) (eq pt (point)))
+  (when (and (not completion-in-region-mode) (equal tick (corfu--auto-tick)))
     (pcase (while-no-input ;; Interruptible capf query
              (run-hook-wrapped 'completion-at-point-functions #'corfu--capf-wrapper))
       ((and `(,fun ,beg ,end ,table . ,plist)
@@ -1154,9 +1153,13 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
     ;; NOTE: Do not use idle timer since this leads to unacceptable slowdowns,
     ;; in particular if flyspell-mode is enabled.
     (setq corfu--auto-timer
-          (run-at-time
-           corfu-auto-delay nil #'corfu--auto-complete
-           (current-buffer) (buffer-chars-modified-tick) (point)))))
+          (run-at-time corfu-auto-delay nil
+                       #'corfu--auto-complete (corfu--auto-tick)))))
+
+(defun corfu--auto-tick ()
+  "Return the current tick/status of the buffer.
+Auto completion is only performed if the tick did not change."
+  (list (current-buffer) (buffer-chars-modified-tick) (point)))
 
 ;;;###autoload
 (define-minor-mode corfu-mode
@@ -1180,21 +1183,7 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
 (defun corfu--capf-wrapper (fun)
   "Wrapper for `completion-at-point' FUN.
 Determines if the capf is applicable at the current position."
-  (pcase
-      ;; bug#50470: Fix Capfs which illegally modify the buffer or which
-      ;; illegally call `completion-in-region'. The workaround here has been
-      ;; proposed @jakanakaevangeli in bug#50470 and is used in
-      ;; @jakanakaevangeli's capf-autosuggest package.
-      (catch 'corfu--illegal-completion-in-region
-        (condition-case nil
-            (let ((buffer-read-only t)
-                  (inhibit-read-only nil)
-                  (completion-in-region-function
-                   (lambda (beg end coll pred)
-                     (throw 'corfu--illegal-completion-in-region
-                            (list beg end coll :predicate pred)))))
-              (funcall fun))
-          (buffer-read-only nil)))
+  (pcase (funcall fun)
     ((and res `(,beg ,end ,table . ,plist))
      (and (integer-or-marker-p beg) ;; Valid capf result
           (<= beg (point) end) ;; Sanity checking
