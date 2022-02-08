@@ -83,17 +83,29 @@ The value should lie between 0 and corfu-count/2."
   "Preselect first candidate."
   :type 'boolean)
 
-(defcustom corfu-quit-at-boundary nil
-  "Automatically quit at completion field/word boundary.
-If automatic quitting is disabled, Orderless filter strings with spaces
-are allowed."
-  :type 'boolean)
+(make-obsolete
+ 'corfu-quit-at-boundary
+ "See the new `corfu-separator' customization."
+ "0.19")
 
-(defcustom corfu-quit-no-match 1.0
+(defcustom corfu-separator ?\s
+  "Component separator character.
+The character used for separating components in the input.  If
+non-nil, the presence of this separator character will inhibit
+quitting at completion boundaries, so that any further characters
+can be entered.  If nil, always quit at completion boundaries.
+To enter the first separator character, call
+`corfu-insert-separator' (bound to M-SPC by default).
+Useful for multi-component completion styles such as orderless."
+  :type '(choice (const nil) character))
+
+(defcustom corfu-quit-no-match 'separator
   "Automatically quit if no matching candidate is found.
-If a floating point number, quit on no match only if the auto-started
-completion began less than that number of seconds ago."
-  :type '(choice boolean float))
+nil: Stay alive even if there is no match.
+t: Quit if there is no match.
+separator: Only stay alive if there is no match and
+`corfu-separator' has been inserted."
+  :type '(choice boolean (const separator)))
 
 (defcustom corfu-excluded-modes nil
   "List of modes excluded by `corfu-global-mode'."
@@ -215,6 +227,7 @@ The completion backend can override this with
     (define-key map "\t" #'corfu-complete)
     (define-key map "\eg" #'corfu-show-location)
     (define-key map "\eh" #'corfu-show-documentation)
+    (define-key map "\e " #'corfu-insert-separator)
     map)
   "Corfu keymap used when popup is shown.")
 
@@ -257,9 +270,6 @@ The completion backend can override this with
 (defvar-local corfu--change-group nil
   "Undo change group.")
 
-(defvar-local corfu--auto-start nil
-  "Auto completion start time.")
-
 (defvar-local corfu--echo-timer nil
   "Echo area message timer.")
 
@@ -280,7 +290,6 @@ The completion backend can override this with
     corfu--total
     corfu--preview-ov
     corfu--extra
-    corfu--auto-start
     corfu--echo-timer
     corfu--echo-message
     corfu--change-group
@@ -366,6 +375,7 @@ The completion backend can override this with
     buffer))
 
 ;; Function adapted from posframe.el by tumashu
+(defvar x-gtk-resize-child-frames) ;; Not present on non-gtk builds
 (defun corfu--make-frame (x y width height content)
   "Show child frame at X/Y with WIDTH/HEIGHT and CONTENT."
   (let* ((window-min-height 1)
@@ -424,22 +434,14 @@ The completion backend can override this with
         ;; XXX HACK Avoid flicker when frame is already visible.
         ;; Redisplay, wait for resize and then move the frame.
         (unless (equal (frame-position corfu--frame) (cons x y))
-          (redisplay)
+          (redisplay 'force)
           (sleep-for 0.01)
           (set-frame-position corfu--frame x y))
       ;; XXX HACK: Force redisplay, otherwise the popup sometimes does not display content.
       (set-frame-position corfu--frame x y)
-      (redisplay)
+      (redisplay 'force)
       (make-frame-visible corfu--frame))
-    ;; XXX HACK: Force redisplay, otherwise the popup sometimes does not display content.
-    (run-at-time 0.01 nil
-                 (lambda ()
-                   (with-current-buffer buffer
-                     (let ((inhibit-read-only t))
-                       (goto-char (point-min))
-                       (insert "please redisplay")
-                       (delete-region (point-min) (point))))
-                   (redisplay)))))
+    (redisplay 'force)))
 
 (defun corfu--popup-show (pos off width lines &optional curr lo bar)
   "Show LINES as popup at POS - OFF.
@@ -558,7 +560,8 @@ A scroll bar is displayed from LO to LO+BAR."
 
 (defun corfu--move-prefix-candidates-to-front (field candidates)
   "Move CANDIDATES which match prefix of FIELD to the beginning."
-  (let* ((word (replace-regexp-in-string " .*" "" field))
+  (let* ((word (substring field 0
+                          (seq-position field corfu-separator)))
          (len (length word)))
     (corfu--partition!
      candidates
@@ -819,12 +822,11 @@ there hasn't been any input, then quit."
       (corfu--echo-documentation)
       (corfu--preview-current beg end str))
      ;; 4) There are no candidates & corfu-quit-no-match => Confirmation popup
-     ((not (or corfu--candidates
-               ;; When `corfu-quit-no-match' is a number of seconds and the auto completion wasn't
-               ;; initiated too long ago, quit directly without showing the "No match" popup.
-               (if (and corfu--auto-start (numberp corfu-quit-no-match))
-                   (< (- (float-time) corfu--auto-start) corfu-quit-no-match)
-                 (eq t corfu-quit-no-match))))
+     ((and (not corfu--candidates)
+           (pcase-exhaustive corfu-quit-no-match
+             ('t nil)
+             ('nil t)
+             ('separator (seq-contains-p (car corfu--input) corfu-separator))))
       (corfu--popup-show beg 0 8 '(#("No match" 0 8 (face italic)))))
      (t (corfu-quit)))))
 
@@ -842,6 +844,12 @@ there hasn't been any input, then quit."
   "Return t if a candidate is selected and previewed."
   (and corfu-preview-current (/= corfu--index corfu--preselect)))
 
+(defun corfu-insert-separator ()
+  "Insert a separator character, inhibiting quit on completion boundary."
+  (interactive)
+  (unless corfu-separator (error "`corfu-separator' character is nil"))
+  (insert corfu-separator))
+
 (defun corfu--post-command ()
   "Refresh Corfu after last command."
   (or (pcase completion-in-region--data
@@ -855,17 +863,18 @@ there hasn't been any input, then quit."
                       (save-excursion
                         (goto-char beg)
                         (<= (line-beginning-position) pt (line-end-position)))
-                      (or (not corfu-quit-at-boundary)
-                          (funcall completion-in-region-mode--predicate))))
+                      (or (and corfu-separator ;; command enables separator insertion
+			       (or (eq this-command #'corfu-insert-separator)
+                                   ;; with separator, any further chars allowed
+				   (seq-contains-p (car corfu--input) corfu-separator)))
+			  (funcall completion-in-region-mode--predicate))))
            (corfu--update)
            t)))
       (corfu-quit)))
 
 (defun corfu--goto (index)
   "Go to candidate with INDEX."
-  (setq corfu--index (max corfu--preselect (min index (1- corfu--total)))
-        ;; Reset auto start in order to disable the `corfu-quit-no-match' timer
-        corfu--auto-start nil))
+  (setq corfu--index (max corfu--preselect (min index (1- corfu--total)))))
 
 (defun corfu-next (&optional n)
   "Go forward N candidates."
@@ -1139,8 +1148,7 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
        (let ((completion-in-region-mode-predicate
               (lambda () (eq beg (car-safe (funcall fun)))))
              (completion-extra-properties plist))
-         (setq corfu--auto-start (float-time)
-               completion-in-region--data
+         (setq completion-in-region--data
                (list (copy-marker beg) (copy-marker end t) table
                      (plist-get plist :predicate)))
          (corfu--setup)
@@ -1227,7 +1235,7 @@ The ORIG function takes the FUN and WHICH arguments."
 ;; Emacs 28: Do not show Corfu commands with M-X
 (dolist (sym '(corfu-next corfu-previous corfu-first corfu-last corfu-quit corfu-reset
                corfu-complete corfu-insert corfu-scroll-up corfu-scroll-down
-               corfu-show-location corfu-show-documentation))
+               corfu-show-location corfu-show-documentation corfu-insert-separator))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'corfu)
