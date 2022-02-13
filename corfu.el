@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.18
+;; Version: 0.19
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -64,6 +64,10 @@ The value should lie between 0 and corfu-count/2."
   "Enable cycling for `corfu-next' and `corfu-previous'."
   :type 'boolean)
 
+(defcustom corfu-on-exact-match 'insert
+  "Configure how a single exact match should be handled."
+  :type '(choice (const insert) (const quit) (const nil)))
+
 (defcustom corfu-continue-commands
   ;; nil is undefined command
   '(nil ignore universal-argument universal-argument-more digit-argument
@@ -71,21 +75,25 @@ The value should lie between 0 and corfu-count/2."
   "Continue Corfu completion after executing these commands."
   :type '(repeat (choice regexp symbol)))
 
-(defcustom corfu-commit-predicate #'corfu-candidate-previewed-p
-  "Automatically commit if the predicate returns t."
-  :type '(choice (const nil) function))
-
-(defcustom corfu-preview-current t
-  "Preview currently selected candidate."
-  :type 'boolean)
+(defcustom corfu-preview-current 'insert
+  "Preview currently selected candidate.
+If the variable has the value `insert', the candidate is automatically
+inserted on further input."
+  :type '(choice boolean (const insert)))
 
 (defcustom corfu-preselect-first t
   "Preselect first candidate."
   :type 'boolean)
 
-(make-obsolete
+(defvar corfu-quit-at-boundary nil)
+(defvar corfu-commit-predicate nil)
+(make-obsolete-variable
  'corfu-quit-at-boundary
  "See the new `corfu-separator' customization."
+ "0.19")
+(make-obsolete-variable
+ 'corfu-commit-predicate
+ "Set `corfu-preview-current' to the value `insert'."
  "0.19")
 
 (defcustom corfu-separator ?\s
@@ -123,7 +131,7 @@ separator: Only stay alive if there is no match and
   "Width of the bar in units of the character width."
   :type 'float)
 
-(defcustom corfu-echo-documentation 0.5
+(defcustom corfu-echo-documentation 1.0
   "Show documentation string in the echo area after that number of seconds."
   :type '(choice boolean float))
 
@@ -227,7 +235,7 @@ The completion backend can override this with
     (define-key map "\t" #'corfu-complete)
     (define-key map "\eg" #'corfu-show-location)
     (define-key map "\eh" #'corfu-show-documentation)
-    (define-key map "\e " #'corfu-insert-separator)
+    (define-key map (concat "\e" " ") #'corfu-insert-separator) ;; Avoid ugly warning
     map)
   "Corfu keymap used when popup is shown.")
 
@@ -440,8 +448,7 @@ The completion backend can override this with
       ;; XXX HACK: Force redisplay, otherwise the popup sometimes does not display content.
       (set-frame-position corfu--frame x y)
       (redisplay 'force)
-      (make-frame-visible corfu--frame))
-    (redisplay 'force)))
+      (make-frame-visible corfu--frame))))
 
 (defun corfu--popup-show (pos off width lines &optional curr lo bar)
   "Show LINES as popup at POS - OFF.
@@ -807,27 +814,32 @@ there hasn't been any input, then quit."
             nil)
         (error (corfu-quit)
                (message "Corfu completion error: %s" (error-message-string err)))))
-     ;; 1) Initializing, no candidates => Quit (happens during auto completion!)
+     ;; 1) Initializing, no candidates => Quit. Happens during auto completion.
      ((and initializing (not corfu--candidates))
       (corfu-quit))
-     ;; 2) Single matching candidate and no further completion is possible
+     ;; 2) Single exactly matching candidate and no further completion is possible.
      ((and (not (equal str ""))
-           (equal corfu--candidates (list str))
-           (not (consp (completion-try-completion str table pred pt corfu--metadata))))
-      ;; Quit directly, happens during auto completion!
-      (if initializing (corfu-quit) (corfu--done str 'finished)))
-     ;; 3) There exist candidates => Show candidates popup
+           (equal (car corfu--candidates) str) (not (cdr corfu--candidates))
+           (not (consp (completion-try-completion str table pred pt corfu--metadata)))
+           (or initializing corfu-on-exact-match))
+      ;; Quit directly when initializing. This happens during auto completion.
+      (if (or initializing (eq corfu-on-exact-match 'quit))
+          (corfu-quit)
+        (corfu--done str 'finished)))
+     ;; 3) There exist candidates => Show candidates popup.
      (corfu--candidates
       (corfu--candidates-popup beg)
+      (corfu--preview-current beg end str)
       (corfu--echo-documentation)
-      (corfu--preview-current beg end str))
-     ;; 4) There are no candidates & corfu-quit-no-match => Confirmation popup
+      (redisplay 'force)) ;; XXX HACK Ensure that popup is redisplayed
+     ;; 4) There are no candidates & corfu-quit-no-match => Confirmation popup.
      ((and (not corfu--candidates)
            (pcase-exhaustive corfu-quit-no-match
              ('t nil)
              ('nil t)
              ('separator (seq-contains-p (car corfu--input) corfu-separator))))
-      (corfu--popup-show beg 0 8 '(#("No match" 0 8 (face italic)))))
+      (corfu--popup-show beg 0 8 '(#("No match" 0 8 (face italic))))
+      (redisplay 'force)) ;; XXX HACK Ensure that popup is redisplayed
      (t (corfu-quit)))))
 
 (defun corfu--pre-command ()
@@ -835,14 +847,10 @@ there hasn't been any input, then quit."
   (when corfu--preview-ov
     (delete-overlay corfu--preview-ov)
     (setq corfu--preview-ov nil))
-  (when (and corfu-commit-predicate
-             (not (corfu--match-symbol-p corfu-continue-commands this-command))
-             (funcall corfu-commit-predicate))
+  (when (and (eq corfu-preview-current 'insert)
+             (/= corfu--index corfu--preselect)
+             (not (corfu--match-symbol-p corfu-continue-commands this-command)))
     (corfu--insert 'exact)))
-
-(defun corfu-candidate-previewed-p ()
-  "Return t if a candidate is selected and previewed."
-  (and corfu-preview-current (/= corfu--index corfu--preselect)))
 
 (defun corfu-insert-separator ()
   "Insert a separator character, inhibiting quit on completion boundary."
@@ -1176,7 +1184,7 @@ Auto completion is only performed if the tick did not change."
 
 ;;;###autoload
 (define-minor-mode corfu-mode
-  "Completion Overlay Region FUnction"
+  "Completion Overlay Region FUnction."
   :global nil :group 'corfu
   (cond
    (corfu-mode
