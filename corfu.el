@@ -131,9 +131,17 @@ separator: Only stay alive if there is no match and
   "Width of the bar in units of the character width."
   :type 'float)
 
-(defcustom corfu-echo-documentation 1.0
-  "Show documentation string in the echo area after that number of seconds."
-  :type '(choice boolean float))
+(defcustom corfu-echo-documentation '(1.0 . 0.2)
+  "Show documentation string in the echo area after that number of seconds.
+Set to nil to disable the echo message or to t for an instant message.
+The value can be a pair of two floats to specify initial and subsequent
+delay."
+  :type '(choice (const :tag "Never" nil)
+                 (const :tag "Instant" t)
+                 (number :tag "Delay in seconds")
+                 (cons :tag "Two Delays"
+                       (choice :tag "Initial   " number))
+                       (choice :tag "Subsequent" number)))
 
 (defcustom corfu-margin-formatters nil
   "Registry for margin formatter functions.
@@ -772,28 +780,35 @@ there hasn't been any input, then quit."
   (when corfu--echo-timer
     (cancel-timer corfu--echo-timer)
     (setq corfu--echo-timer nil))
-  (when corfu--echo-message
-    (corfu--echo-show corfu--echo-message)))
+  (corfu--echo-show corfu--echo-message))
 
-(defun corfu--echo-show (msg)
+(defun corfu--echo-show (&optional msg)
   "Show MSG in echo area."
-  (setq corfu--echo-message msg)
-  (corfu--message "%s" (if (text-property-not-all 0 (length msg) 'face nil msg)
-                           msg
-                         (propertize msg 'face 'corfu-echo))))
+  (when (or msg corfu--echo-message)
+    (setq msg (or msg "")
+          corfu--echo-message msg)
+    (corfu--message "%s" (if (text-property-not-all 0 (length msg) 'face nil msg)
+                             msg
+                           (propertize msg 'face 'corfu-echo)))))
 
 (defun corfu--echo-documentation ()
   "Show documentation string of current candidate in echo area."
-  (when corfu-echo-documentation
-    (if-let* ((fun (plist-get corfu--extra :company-docsig))
-              (cand (and (>= corfu--index 0) (nth corfu--index corfu--candidates)))
-              (doc (funcall fun cand)))
-        (if (or (eq corfu-echo-documentation t) corfu--echo-message)
-            (corfu--echo-show doc)
-          (setq corfu--echo-timer (run-at-time corfu-echo-documentation
-                                               nil #'corfu--echo-show doc)))
-      (when corfu--echo-message
-        (corfu--echo-show "")))))
+  (if-let* ((delay (if (consp corfu-echo-documentation)
+                       (funcall (if corfu--echo-message #'cdr #'car)
+                                corfu-echo-documentation)
+                     corfu-echo-documentation))
+            (fun (plist-get corfu--extra :company-docsig))
+            (cand (and (>= corfu--index 0)
+                       (nth corfu--index corfu--candidates))))
+      (if (or (eq delay t) (<= delay 0))
+          (corfu--echo-show (funcall fun cand))
+        (when corfu--echo-timer (cancel-timer corfu--echo-timer))
+        (setq corfu--echo-timer
+              (run-at-time delay nil
+                           (lambda ()
+                             (corfu--echo-show (funcall fun cand)))))
+        (corfu--echo-show))
+    (corfu--echo-show)))
 
 (defun corfu--update ()
   "Refresh Corfu UI."
@@ -1069,7 +1084,7 @@ there hasn't been any input, then quit."
   (remove-hook 'post-command-hook #'corfu--post-command)
   (when corfu--preview-ov (delete-overlay corfu--preview-ov))
   (when corfu--echo-timer (cancel-timer corfu--echo-timer))
-  (when corfu--echo-message (corfu--echo-show ""))
+  (corfu--echo-show)
   (accept-change-group corfu--change-group)
   (mapc #'kill-local-variable corfu--state-vars))
 
