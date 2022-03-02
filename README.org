@@ -42,16 +42,16 @@
   - The popup can be summoned explicitly by pressing =TAB= at any time.
   - The current candidate is inserted with =TAB= and selected with =RET=.
   - Candidates sorting by prefix, string length and alphabetically.
-  - The selected candidate is previewed (configuable via ~corfu-preview-current~).
+  - The selected candidate is previewed (configurable via ~corfu-preview-current~).
   - The selected candidate automatically committed on further input by default.
     (configurable via ~corfu-preview-current~).
   - The [[https://github.com/oantolin/orderless][Orderless]] completion style is supported. The filter string can contain
-    arbitrary characters, including spaces, if ~corfu-separator~ is configured (try =M-SPC=).
+    arbitrary characters, after inserting a space via =M-SPC= (configurable via
+    ~corfu-quit-at-boundary~ and ~corfu-separator~).
   - Deferred completion style highlighting for performance.
   - Jumping to location/documentation of current candidate.
-  - Show candidate documentation/signature string in the echo area.
+  - Support for candidate annotations and documentation in the echo area.
   - Deprecated candidates are crossed out in the display.
-  - Support for annotations (~annotation-function~, ~affixation-function~).
   - Icons can be provided by an external package via margin formatter functions.
 
 * Installation and Configuration
@@ -84,6 +84,7 @@
       ;; (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
       ;; (corfu-auto t)                 ;; Enable auto completion
       ;; (corfu-separator ?\s)          ;; Orderless field separator
+      ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
       ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
       ;; (corfu-preview-current nil)    ;; Disable current candidate preview
       ;; (corfu-preselect-first nil)    ;; Disable candidate preselection
@@ -270,11 +271,12 @@ Then, when a new orderless component is desired, use =M-SPC=
 and arbitrary orderless search terms and new separators can be entered
 thereafter.
 
-Note that ~corfu-separator~ replaced the older less general option
-~corfu-quit-at-boundary~. If you want similar behavior as with
-~corfu-quit-at-boundary=nil~, you can bind ~corfu-insert-separator~ to =SPC= in
-~corfu-map~. In contrast, if you /always/ want to quit at the boundary, simply set
-~corfu-separator~ to ~nil~.
+To treat the entire input as Orderless input, you can set the customization
+option ~corfu-quit-at-boundary=t~. This disables the predicate which checks if the
+current completion boundary has been left. In contrast, if you /always/ want to
+quit at the boundary, simply set ~corfu-quit-at-boundary=nil~. By default
+~corfu-quit-at-boundary~ is set to ~separator~ which quits at completion boundaries
+as long as no separator has been inserted with ~corfu-insert-separator~.
 
 Finally, there exists the user option ~corfu-quit-no-match~ which is set to
 =separator= by default. With this setting Corfu stays alive as soon as you start
