@@ -153,6 +153,10 @@ return a string, possibly an icon."
           (const :tag "By length and alpha" ,#'corfu-sort-length-alpha)
           (function :tag "Custom function")))
 
+(defcustom corfu-sort-override-function nil
+  "Override sort function which overrides the `display-sort-function'."
+  :type '(choice (const nil) function))
+
 (defcustom corfu-auto-prefix 3
   "Minimum length of prefix for auto completion.
 The completion backend can override this with
@@ -251,8 +255,8 @@ The completion backend can override this with
 (defvar-local corfu--metadata nil
   "Completion metadata.")
 
-(defvar-local corfu--base 0
-  "Size of the base string, which is concatenated with the candidate.")
+(defvar-local corfu--base ""
+  "Base string, which is concatenated with the candidate.")
 
 (defvar-local corfu--total 0
   "Length of the candidate list `corfu--candidates'.")
@@ -588,7 +592,9 @@ A scroll bar is displayed from LO to LO+BAR."
 
 (defun corfu--sort-function ()
   "Return the sorting function."
-  (or (corfu--metadata-get 'display-sort-function) corfu-sort-function))
+  (or corfu-sort-override-function
+      (corfu--metadata-get 'display-sort-function)
+      corfu-sort-function))
 
 (defun corfu--recompute-candidates (str pt table pred)
   "Recompute candidates from STR, PT, TABLE and PRED."
@@ -604,7 +610,8 @@ A scroll bar is displayed from LO to LO+BAR."
                (field (substring str (car bounds) (+ pt (cdr bounds))))
                (completing-file (eq (corfu--metadata-get 'category) 'file))
                (`(,all . ,hl) (corfu--all-completions str table pred pt corfu--metadata))
-               (base (or (when-let (z (last all)) (prog1 (cdr z) (setcdr z nil))) 0)))
+               (base (or (when-let (z (last all)) (prog1 (cdr z) (setcdr z nil))) 0))
+               (corfu--base (substring str 0 base)))
     ;; Filter the ignored file extensions. We cannot use modified predicate for this filtering,
     ;; since this breaks the special casing in the `completion-file-name-table' for `file-exists-p'
     ;; and `file-directory-p'.
@@ -614,7 +621,7 @@ A scroll bar is displayed from LO to LO+BAR."
     (when (and completing-file (not (string-suffix-p "/" field)))
       (setq all (corfu--move-to-front (concat field "/") all)))
     (setq all (corfu--move-to-front field all))
-    (list base all (length all) hl corfu--metadata
+    (list corfu--base all (length all) hl corfu--metadata
           ;; Select the prompt when the input is a valid completion
           ;; and if it is not equal to the first candidate.
           (if (or (not corfu-preselect-first) (not all)
@@ -760,7 +767,7 @@ there hasn't been any input, then quit."
       (setq lo (max 1 lo)))
     (when (/= last corfu--total)
       (setq lo (min (- corfu-count bar 2) lo)))
-    (corfu--popup-show (+ pos corfu--base) pw width fcands (- corfu--index corfu--scroll)
+    (corfu--popup-show (+ pos (length corfu--base)) pw width fcands (- corfu--index corfu--scroll)
                        (and (> corfu--total corfu-count) lo) bar)))
 
 (defun corfu--preview-current (beg end str)
@@ -773,7 +780,7 @@ there hasn't been any input, then quit."
     (overlay-put corfu--preview-ov 'window (selected-window))
     (overlay-put corfu--preview-ov
                  (if (= beg end) 'after-string 'display)
-                 (concat (substring str 0 corfu--base) cand))))
+                 (concat corfu--base cand))))
 
 (defun corfu--echo-refresh ()
   "Refresh echo message to prevent flicker during redisplay."
@@ -1027,7 +1034,7 @@ If a candidate is selected, insert it."
     ;; "~/emacs/master/lisp/", but not the suffix "/calc". Default
     ;; completion has the same problem when selecting in the
     ;; *Completions* buffer. See bug#48356.
-    (setq str (concat (substring str 0 corfu--base)
+    (setq str (concat corfu--base
                       (substring-no-properties (nth corfu--index corfu--candidates))))
     (completion--replace beg end str)
     (corfu--goto -1) ;; Reset selection, but continue completion.
@@ -1132,7 +1139,7 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
              (if (or (= total 0) (not threshold)
                      (and (not (eq threshold t)) (< threshold total)))
                  (corfu--setup)
-               (corfu--cycle-candidates total candidates (+ base beg) end)
+               (corfu--cycle-candidates total candidates (+ (length base) beg) end)
                ;; Do not show Corfu when "trivially" cycling, i.e.,
                ;; when the completion is finished after the candidate.
                (unless (equal (completion-boundaries
