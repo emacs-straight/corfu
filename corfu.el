@@ -111,7 +111,7 @@ separator: Only stay alive if there is no match and
   :type '(choice boolean (const separator)))
 
 (defcustom corfu-excluded-modes nil
-  "List of modes excluded by `corfu-global-mode'."
+  "List of modes excluded by `global-corfu-mode'."
   :type '(repeat symbol))
 
 (defcustom corfu-left-margin-width 0.5
@@ -240,8 +240,8 @@ The completion backend can override this with
     (define-key map "\C-g" #'corfu-quit)
     (define-key map "\r" #'corfu-insert)
     (define-key map "\t" #'corfu-complete)
-    (define-key map "\eg" #'corfu-show-location)
-    (define-key map "\eh" #'corfu-show-documentation)
+    (define-key map "\eg" 'corfu-info-location)
+    (define-key map "\eh" 'corfu-info-documentation)
     (define-key map (concat "\e" " ") #'corfu-insert-separator) ;; Avoid ugly warning
     map)
   "Corfu keymap used when popup is shown.")
@@ -771,8 +771,8 @@ there hasn't been any input, then quit."
     (corfu--popup-show (+ pos (length corfu--base)) pw width fcands (- corfu--index corfu--scroll)
                        (and (> corfu--total corfu-count) lo) bar)))
 
-(defun corfu--preview-current (beg end str)
-  "Show current candidate as overlay given BEG, END and STR."
+(defun corfu--preview-current (beg end)
+  "Show current candidate as overlay given BEG and END."
   (when-let (cand (and corfu-preview-current (>= corfu--index 0)
                        (/= corfu--index corfu--preselect)
                        (nth corfu--index corfu--candidates)))
@@ -852,7 +852,7 @@ there hasn't been any input, then quit."
      ;; 3) There exist candidates => Show candidates popup.
      (corfu--candidates
       (corfu--candidates-popup beg)
-      (corfu--preview-current beg end str)
+      (corfu--preview-current beg end)
       (corfu--echo-documentation)
       (redisplay 'force)) ;; XXX HACK Ensure that popup is redisplayed
      ;; 4) There are no candidates & corfu-quit-no-match => Confirmation popup.
@@ -872,7 +872,9 @@ there hasn't been any input, then quit."
     (setq corfu--preview-ov nil))
   (when (and (eq corfu-preview-current 'insert)
              (/= corfu--index corfu--preselect)
-             (not (corfu--match-symbol-p corfu-continue-commands this-command)))
+             ;; See the comment about `overriding-local-map' in `corfu--post-command'.
+             (not (or overriding-terminal-local-map
+                      (corfu--match-symbol-p corfu-continue-commands this-command))))
     (corfu--insert 'exact)))
 
 (defun corfu-insert-separator ()
@@ -893,6 +895,12 @@ See `corfu-separator' for more details."
                         (goto-char beg)
                         (<= (line-beginning-position) pt (line-end-position)))
                       (or
+                       ;; TODO We keep alive Corfu if a `overriding-terminal-local-map' is
+                       ;; installed, for example the `universal-argument-map'. It would be good to
+                       ;; think about a better criterion instead. Unfortunately relying on
+                       ;; `this-command' alone is not sufficient, since the value of `this-command'
+                       ;; gets clobbered in the case of transient keymaps.
+                       overriding-terminal-local-map
                        ;; Check if it is an explicitly listed continue command
                        (corfu--match-symbol-p corfu-continue-commands this-command)
                        (and
@@ -948,56 +956,6 @@ See `corfu-separator' for more details."
   "Go to last candidate."
   (interactive)
   (corfu--goto (1- corfu--total)))
-
-(defun corfu--restore-on-next-command ()
-  "Restore window configuration before next command."
-  (let ((config (current-window-configuration))
-        (other other-window-scroll-buffer)
-        (restore (make-symbol "corfu--restore")))
-    (fset restore
-          (lambda ()
-            (setq other-window-scroll-buffer other)
-            (unless (memq this-command '(scroll-other-window scroll-other-window-down))
-              (when (memq this-command '(corfu-quit corfu-reset))
-                (setq this-command #'ignore))
-              (remove-hook 'pre-command-hook restore)
-              (set-window-configuration config))))
-    (add-hook 'pre-command-hook restore)))
-
-;; Company support, taken from `company.el', see `company-show-doc-buffer'.
-(defun corfu-show-documentation ()
-  "Show documentation of current candidate."
-  (interactive)
-  (when (< corfu--index 0)
-    (user-error "No candidate selected"))
-  (if-let* ((fun (plist-get corfu--extra :company-doc-buffer))
-            (res (funcall fun (nth corfu--index corfu--candidates))))
-      (let ((buf (or (car-safe res) res)))
-        (corfu--restore-on-next-command)
-        (setq other-window-scroll-buffer (get-buffer buf))
-        (set-window-start (display-buffer buf t) (or (cdr-safe res) (point-min))))
-    (user-error "No documentation available")))
-
-;; Company support, taken from `company.el', see `company-show-location'.
-(defun corfu-show-location ()
-  "Show location of current candidate."
-  (interactive)
-  (when (< corfu--index 0)
-    (user-error "No candidate selected"))
-  (if-let* ((fun (plist-get corfu--extra :company-location))
-            (loc (funcall fun (nth corfu--index corfu--candidates))))
-      (let ((buf (or (and (bufferp (car loc)) (car loc)) (find-file-noselect (car loc) t))))
-        (corfu--restore-on-next-command)
-        (setq other-window-scroll-buffer buf)
-        (with-selected-window (display-buffer buf t)
-          (save-restriction
-            (widen)
-            (if (bufferp (car loc))
-                (goto-char (cdr loc))
-              (goto-char (point-min))
-              (forward-line (1- (cdr loc))))
-            (set-window-start nil (point)))))
-    (user-error "No candidate location available")))
 
 (defun corfu-complete ()
   "Try to complete current input.
@@ -1257,7 +1215,10 @@ The ORIG function takes the FUN and WHICH arguments."
   (if corfu-mode (corfu--capf-wrapper fun t) (funcall orig fun which)))
 
 ;;;###autoload
-(define-globalized-minor-mode corfu-global-mode corfu-mode corfu--on :group 'corfu)
+(define-obsolete-function-alias 'corfu-global-mode 'global-corfu-mode "0.21")
+
+;;;###autoload
+(define-globalized-minor-mode global-corfu-mode corfu-mode corfu--on :group 'corfu)
 
 (defun corfu--on ()
   "Turn `corfu-mode' on."
@@ -1273,7 +1234,7 @@ The ORIG function takes the FUN and WHICH arguments."
 ;; Emacs 28: Do not show Corfu commands with M-X
 (dolist (sym '(corfu-next corfu-previous corfu-first corfu-last corfu-quit corfu-reset
                corfu-complete corfu-insert corfu-scroll-up corfu-scroll-down
-               corfu-show-location corfu-show-documentation corfu-insert-separator))
+               corfu-insert-separator))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'corfu)
