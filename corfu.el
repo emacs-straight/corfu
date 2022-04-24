@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.21
+;; Version: 0.22
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -1216,9 +1216,6 @@ length override, set to t for manual completion."
   "Around advice for `completion--capf-wrapper'.
 The ORIG function takes the FUN and WHICH arguments."
   (if corfu-mode (corfu--capf-wrapper fun t) (funcall orig fun which)))
-
-;;;###autoload
-(define-obsolete-function-alias 'corfu-global-mode 'global-corfu-mode "0.21")
 
 ;;;###autoload
 (define-globalized-minor-mode global-corfu-mode corfu-mode corfu--on :group 'corfu)
