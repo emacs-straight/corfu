@@ -85,21 +85,16 @@ Here is an example configuration:
     ;; (corfu-echo-documentation nil) ;; Disable documentation in the echo area
     ;; (corfu-scroll-margin 5)        ;; Use scroll margin
 
-    ;; You may want to enable Corfu only for certain modes.
+    ;; Enable Corfu only for certain modes.
     ;; :hook ((prog-mode . corfu-mode)
     ;;        (shell-mode . corfu-mode)
     ;;        (eshell-mode . corfu-mode))
 
     ;; Recommended: Enable Corfu globally.
-    ;; This is recommended since dabbrev can be used globally (M-/).
+    ;; This is recommended since Dabbrev can be used globally (M-/).
+    ;; See also `corfu-excluded-modes'.
     :init
     (global-corfu-mode))
-
-  ;; Use dabbrev with Corfu!
-  (use-package dabbrev
-    ;; Swap M-/ and C-M-/
-    :bind (("M-/" . dabbrev-completion)
-           ("C-M-/" . dabbrev-expand)))
 
   ;; A few more useful configurations...
   (use-package emacs
@@ -115,6 +110,22 @@ Here is an example configuration:
     ;; Enable indentation+completion using the TAB key.
     ;; `completion-at-point' is often bound to M-TAB.
     (setq tab-always-indent 'complete))
+#+end_src
+
+Dabbrev completion is based on =completion-in-region= and can be used with Corfu.
+You may want to swap the =dabbrev-completion= with the =dabbrev-expand= key for
+easier access, if you prefer completion. Also take a look at the =cape-dabbrev=
+completion at point function provided by my [[https://github.com/minad/cape][Cape]] package.
+
+#+begin_src emacs-lisp
+  ;; Use Dabbrev with Corfu!
+  (use-package dabbrev
+    ;; Swap M-/ and C-M-/
+    :bind (("M-/" . dabbrev-completion)
+           ("C-M-/" . dabbrev-expand))
+    ;; Other useful Dabbrev configurations.
+    :custom
+    (dabbrev-ignored-buffer-regexps '("\\.\\(?:pdf\\|jpe?g\\|png\\)\\'")))
 #+end_src
 
 If you start to configure the package more deeply, I recommend to give the
