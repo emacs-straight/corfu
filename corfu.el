@@ -186,7 +186,8 @@ The completion backend can override this with
   '((((class color) (min-colors 88) (background dark)) :background "#191a1b")
     (((class color) (min-colors 88) (background light)) :background "#f0f0f0")
     (t :background "gray"))
-  "Default face used for the popup, in particular the background and foreground color.")
+  "Default face used for the popup, in particular the background
+  and foreground color.")
 
 (defface corfu-current
   '((((class color) (min-colors 88) (background dark))
@@ -235,14 +236,14 @@ The completion backend can override this with
     ;; XXX [tab] is bound because of org-mode
     ;; The binding should be removed from org-mode-map.
     (define-key map [tab] #'corfu-complete)
-    (define-key map "\en" #'corfu-next)
-    (define-key map "\ep" #'corfu-previous)
+    (define-key map "\M-n" #'corfu-next)
+    (define-key map "\M-p" #'corfu-previous)
     (define-key map "\C-g" #'corfu-quit)
     (define-key map "\r" #'corfu-insert)
     (define-key map "\t" #'corfu-complete)
-    (define-key map "\eg" 'corfu-info-location)
-    (define-key map "\eh" 'corfu-info-documentation)
-    (define-key map (concat "\e" " ") #'corfu-insert-separator) ;; Avoid ugly warning
+    (define-key map "\M-g" 'corfu-info-location)
+    (define-key map "\M-h" 'corfu-info-documentation)
+    (define-key map "\M- " #'corfu-insert-separator)
     map)
   "Corfu keymap used when popup is shown.")
 
@@ -406,8 +407,9 @@ The completion backend can override this with
              ;; * https://gitlab.gnome.org/GNOME/mutter/-/issues/840
              ;; * https://lists.gnu.org/archive/html/emacs-devel/2020-02/msg00001.html
              (string-match-p "gtk3" system-configuration-features)
-             (string-match-p "gnome\\|cinnamon" (or (getenv "XDG_CURRENT_DESKTOP")
-                                                    (getenv "DESKTOP_SESSION") ""))
+             (string-match-p "gnome\\|cinnamon"
+                             (or (getenv "XDG_CURRENT_DESKTOP")
+                                 (getenv "DESKTOP_SESSION") ""))
              'resize-mode)))
          (after-make-frame-functions)
          (edge (window-inside-pixel-edges))
@@ -429,11 +431,11 @@ The completion backend can override this with
                             ;; Set `internal-border-width' for Emacs 27
                             (internal-border-width . ,border)
                             ,@corfu--frame-parameters))))
-    ;; XXX HACK Setting the same frame-parameter/face-background is not a nop (BUG!).
-    ;; Check explicitly before applying the setting.
-    ;; Without the check, the frame flickers on Mac.
-    ;; XXX HACK We have to apply the face background before adjusting the frame parameter,
-    ;; otherwise the border is not updated (BUG!).
+    ;; XXX HACK Setting the same frame-parameter/face-background is not a nop.
+    ;; Check explicitly before applying the setting. Without the check, the
+    ;; frame flickers on Mac.
+    ;; XXX HACK We have to apply the face background before adjusting the frame
+    ;; parameter, otherwise the border is not updated (BUG!).
     (let* ((face (if (facep 'child-frame-border) 'child-frame-border 'internal-border))
            (new (face-attribute 'corfu-border :background nil 'default)))
       (unless (equal (face-attribute face :background corfu--frame 'default) new)
@@ -453,7 +455,8 @@ The completion backend can override this with
           (redisplay 'force)
           (sleep-for 0.01)
           (set-frame-position corfu--frame x y))
-      ;; XXX HACK: Force redisplay, otherwise the popup sometimes does not display content.
+      ;; XXX HACK: Force redisplay, otherwise the popup sometimes does not
+      ;; display content.
       (set-frame-position corfu--frame x y)
       (redisplay 'force)
       (make-frame-visible corfu--frame))))
@@ -507,15 +510,17 @@ A scroll bar is displayed from LO to LO+BAR."
     list))
 
 ;; bug#47711: Deferred highlighting for `completion-all-completions'
-;; XXX There is one complication: `completion--twq-all' already adds `completions-common-part'.
+;; XXX There is one complication: `completion--twq-all' already adds
+;; `completions-common-part'.
 (defun corfu--all-completions (&rest args)
   "Compute all completions for ARGS with deferred highlighting."
   (cl-letf* ((orig-pcm (symbol-function #'completion-pcm--hilit-commonality))
              (orig-flex (symbol-function #'completion-flex-all-completions))
              ((symbol-function #'completion-flex-all-completions)
               (lambda (&rest args)
-                ;; Unfortunately for flex we have to undo the deferred highlighting, since flex uses
-                ;; the completion-score for sorting, which is applied during highlighting.
+                ;; Unfortunately for flex we have to undo the deferred
+                ;; highlighting, since flex uses the completion-score for
+                ;; sorting, which is applied during highlighting.
                 (cl-letf (((symbol-function #'completion-pcm--hilit-commonality) orig-pcm))
                   (apply orig-flex args))))
              ;; Defer the following highlighting functions
@@ -527,14 +532,16 @@ A scroll bar is displayed from LO to LO+BAR."
              ((symbol-function #'completion-pcm--hilit-commonality)
               (lambda (pattern cands)
                 (setq hl (lambda (x)
-                           ;; `completion-pcm--hilit-commonality' sometimes throws an internal error
-                           ;; for example when entering "/sudo:://u".
+                           ;; `completion-pcm--hilit-commonality' sometimes
+                           ;; throws an internal error for example when entering
+                           ;; "/sudo:://u".
                            (condition-case nil
                                (completion-pcm--hilit-commonality pattern x)
                              (t x))))
                 cands)))
     ;; Only advise orderless after it has been loaded to avoid load order issues
-    (if (and (fboundp 'orderless-highlight-matches) (fboundp 'orderless-pattern-compiler))
+    (if (and (fboundp 'orderless-highlight-matches)
+             (fboundp 'orderless-pattern-compiler))
         (cl-letf (((symbol-function 'orderless-highlight-matches)
                    (lambda (pattern cands)
                      (let ((regexps (orderless-pattern-compiler pattern)))
@@ -613,9 +620,9 @@ A scroll bar is displayed from LO to LO+BAR."
                (`(,all . ,hl) (corfu--all-completions str table pred pt corfu--metadata))
                (base (or (when-let (z (last all)) (prog1 (cdr z) (setcdr z nil))) 0))
                (corfu--base (substring str 0 base)))
-    ;; Filter the ignored file extensions. We cannot use modified predicate for this filtering,
-    ;; since this breaks the special casing in the `completion-file-name-table' for `file-exists-p'
-    ;; and `file-directory-p'.
+    ;; Filter the ignored file extensions. We cannot use modified predicate for
+    ;; this filtering, since this breaks the special casing in the
+    ;; `completion-file-name-table' for `file-exists-p' and `file-directory-p'.
     (when completing-file (setq all (corfu--filter-files all)))
     (setq all (delete-consecutive-dups (funcall (or (corfu--sort-function) #'identity) all)))
     (setq all (corfu--move-prefix-candidates-to-front field all))
@@ -687,9 +694,10 @@ there hasn't been any input, then quit."
                            (plist-get corfu--extra :annotation-function)))
               (cl-loop for cand in cands collect
                        (let ((suffix (or (funcall ann cand) "")))
-                         ;; The default completion UI adds the `completions-annotations' face
-                         ;; if no other faces are present. We use a custom `corfu-annotations'
-                         ;; face to allow further styling which fits better for popups.
+                         ;; The default completion UI adds the
+                         ;; `completions-annotations' face if no other faces are
+                         ;; present. We use a custom `corfu-annotations' face to
+                         ;; allow further styling which fits better for popups.
                          (unless (text-property-not-all 0 (length suffix) 'face nil suffix)
                            (setq suffix (propertize suffix 'face 'corfu-annotations)))
                          (list cand "" suffix)))
@@ -965,24 +973,40 @@ If a candidate is selected, insert it."
   (pcase-let ((`(,beg ,end ,table ,pred) completion-in-region--data))
     (if (>= corfu--index 0)
         ;; Continue completion with selected candidate
-        (corfu--insert nil)
+        (progn
+          (corfu--insert nil)
+          ;; Exit with status 'finished if input is a valid match and no further
+          ;; completion is possible. Furthermore treat the completion as
+          ;; finished if we are at the end of a boundary, even if other longer
+          ;; candidates would still match, since the user invoked `corfu-complete'
+          ;; with an explicitly selected candidate!
+          (let ((newstr (buffer-substring-no-properties beg end)))
+            (when (and (test-completion newstr table pred)
+                       (or
+                        (not (consp (completion-try-completion
+                                     newstr table pred (length newstr)
+                                     (completion-metadata newstr table pred))))
+                        (equal (completion-boundaries newstr table pred "") '(0 . 0))))
+              (corfu--done newstr 'finished))))
       ;; Try to complete the current input string
       (let* ((pt (max 0 (- (point) beg)))
              (str (buffer-substring-no-properties beg end))
              (metadata (completion-metadata (substring str 0 pt) table pred)))
         (pcase (completion-try-completion str table pred pt metadata)
+          ('t
+           (goto-char end)
+           (corfu--done str 'finished))
           (`(,newstr . ,newpt)
            (unless (equal str newstr)
              (completion--replace beg end (concat newstr)))
-           (goto-char (+ beg newpt))))))
-    ;; No further completion is possible and the current string is a valid
-    ;; match, exit with status 'finished.
-    (let* ((pt (max 0 (- (point) beg)))
-           (str (buffer-substring-no-properties beg end))
-           (metadata (completion-metadata (substring str 0 pt) table pred)))
-      (when (and (not (consp (completion-try-completion str table pred pt metadata)))
-                 (test-completion str table pred))
-        (corfu--done str 'finished)))))
+           (goto-char (+ beg newpt))
+           ;; Exit with status 'finished if input is a valid match
+           ;; and no further completion is possible.
+           (when (and (test-completion newstr table pred)
+                      (not (consp (completion-try-completion
+                                   newstr table pred newpt
+                                   (completion-metadata newstr table pred)))))
+             (corfu--done newstr 'finished))))))))
 
 (defun corfu--insert (status)
   "Insert current candidate, exit with STATUS if non-nil."
@@ -994,9 +1018,9 @@ If a candidate is selected, insert it."
     ;; "~/emacs/master/lisp/", but not the suffix "/calc". Default
     ;; completion has the same problem when selecting in the
     ;; *Completions* buffer. See bug#48356.
-    (setq str (concat corfu--base
-                      (substring-no-properties (nth corfu--index corfu--candidates))))
-    (completion--replace beg end str)
+    (setq str (concat corfu--base (substring-no-properties
+                                   (nth corfu--index corfu--candidates))))
+    (completion--replace beg end (concat str))
     (corfu--goto -1) ;; Reset selection, but continue completion.
     (when status (corfu--done str status)))) ;; Exit with status
 
@@ -1059,8 +1083,9 @@ Quit if no candidate is selected."
 See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
   (barf-if-buffer-read-only)
   (if (not (display-graphic-p))
-      ;; XXX Warning this can result in an endless loop when `completion-in-region-function'
-      ;; is set *globally* to `corfu--in-region'. This should never happen.
+      ;; XXX Warning this can result in an endless loop when
+      ;; `completion-in-region-function' is set *globally* to
+      ;; `corfu--in-region'. This should never happen.
       (funcall (default-value 'completion-in-region-function) beg end table pred)
     ;; Restart the completion. This can happen for example if C-M-/
     ;; (`dabbrev-completion') is pressed while the Corfu popup is already open.
@@ -1090,21 +1115,22 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
              (completion--replace beg end (concat newstr)))
            (goto-char (+ beg newpt))
            (if (= total 1)
-               (when exit
-                 (funcall exit newstr
-                          ;; If completion is finished and cannot be further completed,
-                          ;; return 'finished. Otherwise return 'exact.
-                          (if (eq (try-completion (car candidates) table pred) t)
-                              'finished 'exact)))
+               ;; If completion is finished and cannot be further completed,
+               ;; return 'finished. Otherwise setup the Corfu popup.
+               (cond
+                ((consp (completion-try-completion
+                         newstr table pred newpt
+                         (completion-metadata newstr table pred)))
+                 (corfu--setup))
+                (exit (funcall exit newstr 'finished)))
              (if (or (= total 0) (not threshold)
                      (and (not (eq threshold t)) (< threshold total)))
                  (corfu--setup)
                (corfu--cycle-candidates total candidates (+ (length base) beg) end)
                ;; Do not show Corfu when "trivially" cycling, i.e.,
                ;; when the completion is finished after the candidate.
-               (unless (equal (completion-boundaries
-                               (buffer-substring-no-properties beg end)
-                               table pred "") '(0 . 0))
+               (unless (equal (completion-boundaries (car candidates) table pred "")
+                              '(0 . 0))
                  (corfu--setup)))))
          t)))))
 
