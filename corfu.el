@@ -366,14 +366,6 @@ The completion backend can override this with
     map)
   "Ignore all mouse clicks.")
 
-(defun corfu--popup-redirect-focus ()
-  "Redirect focus from popup."
-  (when (and (frame-live-p corfu--frame) (eq (selected-frame) corfu--frame))
-    ;; I don't understand what I am doing...
-    ;; Why is this even necessary? The frame is marked with no-accept-focus!!!
-    (redirect-frame-focus corfu--frame (frame-parent corfu--frame))
-    (x-focus-frame (frame-parent corfu--frame))))
-
 (defun corfu--make-buffer (content)
   "Create corfu buffer with CONTENT."
   (let ((fr face-remapping-alist)
@@ -423,13 +415,14 @@ The completion backend can override this with
          (y (if (> (+ yb (* corfu-count ch) ch ch) (frame-pixel-height))
                 (- yb height ch 1)
               yb))
-         (buffer (corfu--make-buffer content)))
+         (buffer (corfu--make-buffer content))
+         (parent (window-frame)))
     (unless (and (frame-live-p corfu--frame)
-                 (eq (frame-parent corfu--frame) (window-frame)))
+                 (eq (frame-parent corfu--frame) parent))
       (when corfu--frame (delete-frame corfu--frame))
       (setq corfu--frame (make-frame
-                          `((parent-frame . ,(window-frame))
-                            (minibuffer . ,(minibuffer-window (window-frame)))
+                          `((parent-frame . ,parent)
+                            (minibuffer . ,(minibuffer-window parent))
                             ;; Set `internal-border-width' for Emacs 27
                             (internal-border-width . ,border)
                             ,@corfu--frame-parameters))))
@@ -461,7 +454,8 @@ The completion backend can override this with
       ;; display content.
       (set-frame-position corfu--frame x y)
       (redisplay 'force)
-      (make-frame-visible corfu--frame))))
+      (make-frame-visible corfu--frame))
+    (redirect-frame-focus corfu--frame parent)))
 
 (defun corfu--popup-show (pos off width lines &optional curr lo bar)
   "Show LINES as popup at POS - OFF.
@@ -1215,9 +1209,7 @@ Auto completion is only performed if the tick did not change."
     ;; advice is active *globally*.
     (advice-add #'completion--capf-wrapper :around #'corfu--capf-wrapper-advice)
     (advice-add #'eldoc-display-message-no-interference-p :before-while #'corfu--allow-eldoc)
-    ;;; XXX HACK install redirect focus hook
-    (add-function :after after-focus-change-function #'corfu--popup-redirect-focus)
-    (when corfu-auto (add-hook 'post-command-hook #'corfu--auto-post-command nil 'local))
+    (and corfu-auto (add-hook 'post-command-hook #'corfu--auto-post-command nil 'local))
     (setq-local completion-in-region-function #'corfu--in-region))
    (t
     (remove-hook 'post-command-hook #'corfu--auto-post-command 'local)
