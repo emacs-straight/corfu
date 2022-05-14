@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.23"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.24"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -26,8 +26,10 @@
 
 ;;; Commentary:
 
-;; This Corfu extension provides commands to show additional information
-;; to the candidates in a separate buffer.
+;; This Corfu extension provides commands to show additional information to the
+;; candidates in a separate buffer. The commands `corfu-info-location' and
+;; `corfu-info-documentation' are bound by default in the `corfu-map' to M-g and
+;; M-h respectively.
 
 ;;; Code:
 

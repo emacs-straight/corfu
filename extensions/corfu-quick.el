@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.23"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.24"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -32,7 +32,7 @@
 ;; alternative to selecting a candidate with `corfu-next' and
 ;; `corfu-previous'.
 ;; (define-key corfu-map "\M-q" #'corfu-quick-complete)
-;; (define-key corfu-map "\C-q" #'corfu-quick-exit)
+;; (define-key corfu-map "\C-q" #'corfu-quick-insert)
 
 ;;; Code:
 

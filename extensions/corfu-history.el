@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.23"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.24"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -30,6 +30,10 @@
 ;; position. Maintain a list of recently selected candidates. In order
 ;; to save the history across Emacs sessions, enable `savehist-mode' and
 ;; add `corfu-history' to `savehist-additional-variables'.
+;;
+;; (corfu-history-mode 1)
+;; (savehist-mode 1)
+;; (add-to-list 'savehist-additional-variables 'corfu-history)
 
 ;;; Code:
 

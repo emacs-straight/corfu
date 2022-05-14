@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.23"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.24"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -26,9 +26,10 @@
 
 ;;; Commentary:
 
-;; This package is a Corfu extension, which prefixes candidates with indices and
-;; allows you to select with prefix arguments. This is designed to be a faster
-;; alternative to selecting a candidate with `corfu-next' and `corfu-previous'.
+;; This package is a Corfu extension, which prefixes candidates with indices if
+;; enabled via `corfu-indexed-mode'. It allows you to select candidates with
+;; prefix arguments. This is designed to be a faster alternative to selecting a
+;; candidate with `corfu-next' and `corfu-previous'.
 
 ;;; Code:
 
