@@ -135,8 +135,8 @@ delay."
                  (const :tag "Instant" t)
                  (number :tag "Delay in seconds")
                  (cons :tag "Two Delays"
-                       (choice :tag "Initial   " number))
-                       (choice :tag "Subsequent" number)))
+                       (choice :tag "Initial   " number)
+                       (choice :tag "Subsequent" number))))
 
 (defcustom corfu-margin-formatters nil
   "Registry for margin formatter functions.
@@ -294,6 +294,9 @@ The completion backend can override this with
 (defvar corfu--frame nil
   "Popup frame.")
 
+(defvar corfu--frame-timer nil
+  "Frame hide timer.")
+
 (defconst corfu--state-vars
   '(corfu--base
     corfu--candidates
@@ -328,8 +331,6 @@ The completion backend can override this with
     (tool-bar-lines . 0)
     (tab-bar-lines . 0)
     (no-other-frame . t)
-    (no-other-window . t)
-    (no-delete-other-windows . t)
     (unsplittable . t)
     (undecorated . t)
     (cursor-type . nil)
@@ -442,6 +443,9 @@ The completion backend can override this with
         (set-frame-parameter corfu--frame 'background-color new)))
     (let ((win (frame-root-window corfu--frame)))
       (set-window-buffer win buffer)
+      ;; Disallow selection of root window (#63)
+      (set-window-parameter win 'no-delete-other-windows t)
+      (set-window-parameter win 'no-other-window t)
       ;; Mark window as dedicated to prevent frame reuse (#60)
       (set-window-dedicated-p win t))
     (set-frame-size corfu--frame width height t)
@@ -492,21 +496,20 @@ A scroll bar is displayed from LO to LO+BAR."
                     str))
                 lines "\n"))))
 
+(defun corfu--hide-frame-deferred ()
+  "Deferred frame hiding."
+  (setq corfu--frame-timer nil)
+  (when (frame-live-p corfu--frame)
+    (make-frame-invisible corfu--frame)
+    (with-current-buffer (window-buffer (frame-root-window corfu--frame))
+      (let ((inhibit-modification-hooks t)
+            (inhibit-read-only t))
+        (erase-buffer)))))
+
 (defun corfu--popup-hide ()
   "Hide Corfu popup."
-  (when (frame-live-p corfu--frame)
-    (run-at-time
-     0 nil
-     (lambda ()
-       (when (frame-live-p corfu--frame)
-         ;; Redisplay such that the input becomes immediately visible before the popup
-         ;; hiding, which is slow (Issue #48). See also corresponding vertico#89.
-         (redisplay)
-         (make-frame-invisible corfu--frame)
-         (with-current-buffer (window-buffer (frame-root-window corfu--frame))
-           (let ((inhibit-modification-hooks t)
-                 (inhibit-read-only t))
-             (erase-buffer))))))))
+  (when (and (frame-live-p corfu--frame) (not corfu--frame-timer))
+    (setq corfu--frame-timer (run-at-time 0 nil #'corfu--hide-frame-deferred))))
 
 (defun corfu--popup-support-p ()
   "Return non-nil if child frames are supported."
@@ -805,14 +808,14 @@ there hasn't been any input, then quit."
                  (if (= beg end) 'after-string 'display)
                  (concat corfu--base cand))))
 
-(defun corfu--echo-refresh ()
-  "Refresh echo message to prevent flicker during redisplay."
+(defun corfu--echo-cancel (&optional msg)
+  "Cancel echo timer and refresh MSG to prevent flicker during redisplay."
   (when corfu--echo-timer
     (cancel-timer corfu--echo-timer)
     (setq corfu--echo-timer nil))
-  (corfu--echo-show corfu--echo-message))
+  (corfu--echo-show msg))
 
-(defun corfu--echo-show (&optional msg)
+(defun corfu--echo-show (msg)
   "Show MSG in echo area."
   (when (or msg corfu--echo-message)
     (setq msg (or msg "")
@@ -832,13 +835,12 @@ there hasn't been any input, then quit."
                        (nth corfu--index corfu--candidates))))
       (if (or (eq delay t) (<= delay 0))
           (corfu--echo-show (funcall fun cand))
-        (when corfu--echo-timer (cancel-timer corfu--echo-timer))
+        (corfu--echo-cancel)
         (setq corfu--echo-timer
               (run-at-time delay nil
                            (lambda ()
-                             (corfu--echo-show (funcall fun cand)))))
-        (corfu--echo-show))
-    (corfu--echo-show)))
+                             (corfu--echo-show (funcall fun cand))))))
+    (corfu--echo-cancel)))
 
 (defun corfu--update ()
   "Refresh Corfu UI."
@@ -846,7 +848,10 @@ there hasn't been any input, then quit."
                (pt (- (point) beg))
                (str (buffer-substring-no-properties beg end))
                (initializing (not corfu--input)))
-    (corfu--echo-refresh)
+    (when corfu--frame-timer
+      (cancel-timer corfu--frame-timer)
+      (setq corfu--frame-timer nil))
+    (corfu--echo-cancel corfu--echo-message)
     (cond
      ;; XXX Guard against errors during candidate generation.
      ;; Turn off completion immediately if there are errors
@@ -938,7 +943,8 @@ See `corfu-separator' for more details."
                             (funcall completion-in-region-mode--predicate))))))
            (corfu--update)
            t)))
-      (corfu-quit)))
+      (corfu-quit))
+  (when corfu-auto (corfu--auto-post-command)))
 
 (defun corfu--goto (index)
   "Go to candidate with INDEX."
@@ -1086,8 +1092,7 @@ Quit if no candidate is selected."
   (remove-hook 'pre-command-hook #'corfu--pre-command 'local)
   (remove-hook 'post-command-hook #'corfu--post-command)
   (when corfu--preview-ov (delete-overlay corfu--preview-ov))
-  (when corfu--echo-timer (cancel-timer corfu--echo-timer))
-  (corfu--echo-show)
+  (corfu--echo-cancel)
   (accept-change-group corfu--change-group)
   (mapc #'kill-local-variable corfu--state-vars))
 
@@ -1170,10 +1175,11 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
     (define-key map (vector last-command-event) replace)
     (funcall replace)))
 
-(defun corfu--auto-complete (tick)
+(defun corfu--auto-complete-deferred (&optional tick)
   "Initiate auto completion if TICK did not change."
   (setq corfu--auto-timer nil)
-  (when (and (not completion-in-region-mode) (equal tick (corfu--auto-tick)))
+  (when (and (not completion-in-region-mode)
+             (or (not tick) (equal tick (corfu--auto-tick))))
     (pcase (while-no-input ;; Interruptible capf query
              (run-hook-wrapped 'completion-at-point-functions #'corfu--capf-wrapper))
       (`(,fun ,beg ,end ,table . ,plist)
@@ -1193,15 +1199,18 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
   (when corfu--auto-timer
     (cancel-timer corfu--auto-timer)
     (setq corfu--auto-timer nil))
-  (when (and (not defining-kbd-macro)
+  (when (and (not completion-in-region-mode)
+             (not defining-kbd-macro)
              (not buffer-read-only)
              (corfu--match-symbol-p corfu-auto-commands this-command)
              (corfu--popup-support-p))
-    ;; NOTE: Do not use idle timer since this leads to unacceptable slowdowns,
-    ;; in particular if flyspell-mode is enabled.
-    (setq corfu--auto-timer
-          (run-at-time corfu-auto-delay nil
-                       #'corfu--auto-complete (corfu--auto-tick)))))
+    (if (<= corfu-auto-delay 0)
+        (corfu--auto-complete-deferred)
+      ;; NOTE: Do not use idle timer since this leads to unacceptable slowdowns,
+      ;; in particular if flyspell-mode is enabled.
+      (setq corfu--auto-timer
+            (run-at-time corfu-auto-delay nil
+                         #'corfu--auto-complete-deferred (corfu--auto-tick))))))
 
 (defun corfu--auto-tick ()
   "Return the current tick/status of the buffer.
