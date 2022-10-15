@@ -393,6 +393,9 @@ The completion backend can override this with
 (defvar x-gtk-resize-child-frames) ;; Not present on non-gtk builds
 (defun corfu--make-frame (x y width height content)
   "Show child frame at X/Y with WIDTH/HEIGHT and CONTENT."
+  (when corfu--frame-timer
+    (cancel-timer corfu--frame-timer)
+    (setq corfu--frame-timer nil))
   (let* ((window-min-height 1)
          (window-min-width 1)
          (x-gtk-resize-child-frames
@@ -617,7 +620,7 @@ A scroll bar is displayed from LO to LO+BAR."
       (corfu--metadata-get 'display-sort-function)
       corfu-sort-function))
 
-(defun corfu--recompute-state (str pt table pred)
+(defun corfu--recompute (str pt table pred)
   "Recompute state from STR, PT, TABLE and PRED."
   (pcase-let* ((before (substring str 0 pt))
                (after (substring str pt))
@@ -642,36 +645,49 @@ A scroll bar is displayed from LO to LO+BAR."
     (when (and completing-file (not (string-suffix-p "/" field)))
       (setq all (corfu--move-to-front (concat field "/") all)))
     (setq all (corfu--move-to-front field all))
-    (list corfu--base all (length all) hl corfu--metadata
-          ;; Select the prompt when the input is a valid completion
-          ;; and if it is not equal to the first candidate.
-          (if (or (not corfu-preselect-first) (not all)
-                  (and (not (equal field (car all)))
-                       (not (and completing-file (equal (concat field "/") (car all))))
-                       (test-completion str table pred)))
-              -1 0))))
+    `((corfu--base . ,corfu--base)
+      (corfu--metadata . ,corfu--metadata)
+      (corfu--candidates . ,all)
+      (corfu--total . ,(length all))
+      (corfu--highlight . ,hl)
+      ;; Select the prompt when the input is a valid completion
+      ;; and if it is not equal to the first candidate.
+      (corfu--preselect . ,(if (or (not corfu-preselect-first) (not all)
+                                   (and (not (equal field (car all)))
+                                        (not (and completing-file (equal (concat field "/") (car all))))
+                                        (test-completion str table pred)))
+                               -1 0)))))
 
-(defun corfu--update-state (str pt table pred)
-  "Interruptibly update state from STR, PT, TABLE and PRED."
-  ;; Redisplay such that the input becomes immediately visible before the
-  ;; expensive candidate recomputation is performed (Issue #48). See also
-  ;; corresponding vertico#89.
-  (redisplay)
-  (pcase
+(defun corfu--update (&optional interruptible)
+  "Update state, optionally INTERRUPTIBLE."
+  (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
+               (pt (- (point) beg))
+               (str (buffer-substring-no-properties beg end))
+               (input (cons str pt)))
+    (unless (equal corfu--input input)
+      ;; Redisplay such that the input becomes immediately visible before the
+      ;; expensive candidate recomputation is performed (Issue #48). See also
+      ;; corresponding vertico#89.
+      (when interruptible (redisplay))
       ;; Bind non-essential=t to prevent Tramp from opening new connections,
       ;; without the user explicitly requesting it via M-TAB.
-      (let ((non-essential t))
-        (while-no-input (corfu--recompute-state str pt table pred)))
-    ('nil (keyboard-quit))
-    (`(,base ,candidates ,total ,hl ,metadata ,preselect)
-     (setq corfu--input (cons str pt)
-           corfu--candidates candidates
-           corfu--base base
-           corfu--total total
-           corfu--preselect preselect
-           corfu--index preselect
-           corfu--highlight hl
-           corfu--metadata metadata))))
+      (pcase (let ((non-essential t))
+               ;; XXX Guard against errors during candidate generation.
+               ;; For example dabbrev throws error "No dynamic expansion ... found".
+               ;; TODO Report this as a bug? Are completion tables supposed to throw errors?
+               (condition-case err
+                   (if interruptible
+                       (while-no-input (corfu--recompute str pt table pred))
+                     (corfu--recompute str pt table pred))
+                 (error
+                  (message "Corfu completion error: %s" (error-message-string err))
+                  t)))
+        ('nil (keyboard-quit))
+        ((and state (pred consp))
+         (dolist (s state) (set (car s) (cdr s)))
+         (setq corfu--input input
+               corfu--index corfu--preselect))))
+    input))
 
 (defun corfu--match-symbol-p (pattern sym)
   "Return non-nil if SYM is matching an element of the PATTERN list."
@@ -769,8 +785,8 @@ there hasn't been any input, then quit."
                             suffix)
                     width)))))
 
-(defun corfu--update-scroll ()
-  "Update scroll position."
+(defun corfu--compute-scroll ()
+  "Compute new scroll position."
   (let ((off (max (min corfu-scroll-margin (/ corfu-count 2)) 0))
         (corr (if (= corfu-scroll-margin (/ corfu-count 2)) (1- (mod corfu-count 2)) 0)))
     (setq corfu--scroll (min (max 0 (- corfu--total corfu-count))
@@ -779,7 +795,7 @@ there hasn't been any input, then quit."
 
 (defun corfu--candidates-popup (pos)
   "Show candidates popup at POS."
-  (corfu--update-scroll)
+  (corfu--compute-scroll)
   (pcase-let* ((last (min (+ corfu--scroll corfu-count) corfu--total))
                (bar (ceiling (* corfu-count corfu-count) corfu--total))
                (lo (min (- corfu-count bar 1) (floor (* corfu-count corfu--scroll) corfu--total)))
@@ -841,61 +857,46 @@ there hasn't been any input, then quit."
                              (corfu--echo-show (funcall fun cand))))))
     (corfu--echo-cancel)))
 
-(defun corfu--update ()
-  "Refresh Corfu UI."
-  (pcase-let* ((`(,beg ,end ,table ,pred) completion-in-region--data)
-               (pt (- (point) beg))
-               (str (buffer-substring-no-properties beg end))
-               (initializing (not corfu--input)))
-    (when corfu--frame-timer
-      (cancel-timer corfu--frame-timer)
-      (setq corfu--frame-timer nil))
-    (corfu--echo-cancel corfu--echo-message)
+(defun corfu--exhibit (&optional auto)
+  "Exhibit Corfu UI.
+AUTO is non-nil when initializing auto completion."
+  (pcase-let ((`(,beg ,end ,table ,pred) completion-in-region--data)
+              (`(,str . ,pt) (corfu--update 'interruptible)))
     (cond
-     ;; XXX Guard against errors during candidate generation.
-     ;; Turn off completion immediately if there are errors
-     ;; For example dabbrev throws error "No dynamic expansion ... found".
-     ;; TODO Report this as a bug? Are completion tables supposed to throw errors?
-     ((condition-case err
-          ;; Only recompute when input changed
-          (unless (equal corfu--input (cons str pt))
-            (corfu--update-state str pt table pred)
-            nil)
-        (error (corfu-quit)
-               (message "Corfu completion error: %s" (error-message-string err)))))
-     ;; 1) Initializing, no candidates => Quit. Happens during auto completion.
-     ((and initializing (not corfu--candidates))
-      (corfu-quit))
-     ;; 2) Single exactly matching candidate and no further completion is possible.
+     ;; 1) Single exactly matching candidate and no further completion is possible.
      ((and (not (equal str ""))
            (equal (car corfu--candidates) str) (not (cdr corfu--candidates))
            (not (consp (completion-try-completion str table pred pt corfu--metadata)))
-           (or initializing corfu-on-exact-match))
-      ;; Quit directly when initializing. This happens during auto completion.
-      (if (or initializing (eq corfu-on-exact-match 'quit))
+           (or auto corfu-on-exact-match))
+      ;; Quit directly when initializing auto completion.
+      (if (or auto (eq corfu-on-exact-match 'quit))
           (corfu-quit)
         (corfu--done str 'finished)))
-     ;; 3) There exist candidates => Show candidates popup.
+     ;; 2) There exist candidates => Show candidates popup.
      (corfu--candidates
       (corfu--candidates-popup beg)
       (corfu--preview-current beg end)
       (corfu--echo-documentation)
       (redisplay 'force)) ;; XXX HACK Ensure that popup is redisplayed
-     ;; 4) There are no candidates & corfu-quit-no-match => Confirmation popup.
-     ((and (not corfu--candidates)
-           (pcase-exhaustive corfu-quit-no-match
-             ('t nil)
-             ('nil t)
-             ('separator (seq-contains-p (car corfu--input) corfu-separator))))
+     ;; 3) No candidates & corfu-quit-no-match & initialized => Confirmation popup.
+     ((pcase-exhaustive corfu-quit-no-match
+        ('t nil)
+        ('nil corfu--input)
+        ('separator (seq-contains-p (car corfu--input) corfu-separator)))
       (corfu--popup-show beg 0 8 '(#("No match" 0 8 (face italic))))
       (redisplay 'force)) ;; XXX HACK Ensure that popup is redisplayed
-     (t (corfu-quit)))))
+     ;; 4) No candidates & auto completing or initialized => Quit.
+     ((or auto corfu--input) (corfu-quit)))))
 
 (defun corfu--pre-command ()
   "Insert selected candidate unless command is marked to continue completion."
   (when corfu--preview-ov
     (delete-overlay corfu--preview-ov)
     (setq corfu--preview-ov nil))
+  (corfu--echo-cancel corfu--echo-message)
+  ;; Ensure that state is initialized before next Corfu command
+  (when (and (symbolp this-command) (string-prefix-p "corfu-" (symbol-name this-command)))
+    (corfu--update))
   (when (and (eq corfu-preview-current 'insert)
              (/= corfu--index corfu--preselect)
              ;; See the comment about `overriding-local-map' in `corfu--post-command'.
@@ -909,41 +910,42 @@ See `corfu-separator' for more details."
   (interactive)
   (insert corfu-separator))
 
+(defun corfu--continue-p ()
+  "Continue completion?"
+  (pcase-let ((pt (point))
+              (`(,beg ,end . ,_) completion-in-region--data))
+    (and beg end
+         (eq (marker-buffer beg) (current-buffer))
+         ;; Check ranges
+         (<= beg pt end)
+         (save-excursion
+           (goto-char beg)
+           (let ((inhibit-field-text-motion t))
+             (<= (line-beginning-position) pt (line-end-position))))
+         (or
+          ;; TODO We keep alive Corfu if a `overriding-terminal-local-map' is
+          ;; installed, for example the `universal-argument-map'. It would be good to
+          ;; think about a better criterion instead. Unfortunately relying on
+          ;; `this-command' alone is not sufficient, since the value of `this-command'
+          ;; gets clobbered in the case of transient keymaps.
+          overriding-terminal-local-map
+          ;; Check if it is an explicitly listed continue command
+          (corfu--match-symbol-p corfu-continue-commands this-command)
+          (and (or (not corfu--input) (< beg end)) ;; Check for empty input
+               (or (not corfu-quit-at-boundary) ;; Check separator or predicate
+                   (and (eq corfu-quit-at-boundary 'separator)
+                        (or (eq this-command #'corfu-insert-separator)
+                            ;; with separator, any further chars allowed
+                            (seq-contains-p (car corfu--input) corfu-separator)))
+                   (funcall completion-in-region-mode--predicate)))))))
+
 (defun corfu--post-command ()
   "Refresh Corfu after last command."
-  (or (pcase completion-in-region--data
-        (`(,beg ,end . ,_)
-         (when (let ((pt (point)))
-                 (and (eq (marker-buffer beg) (current-buffer))
-                      ;; Check ranges
-                      (<= beg pt end)
-                      (save-excursion
-                        (goto-char beg)
-                        (let ((inhibit-field-text-motion t))
-                          (<= (line-beginning-position) pt (line-end-position))))
-                      (or
-                       ;; TODO We keep alive Corfu if a `overriding-terminal-local-map' is
-                       ;; installed, for example the `universal-argument-map'. It would be good to
-                       ;; think about a better criterion instead. Unfortunately relying on
-                       ;; `this-command' alone is not sufficient, since the value of `this-command'
-                       ;; gets clobbered in the case of transient keymaps.
-                       overriding-terminal-local-map
-                       ;; Check if it is an explicitly listed continue command
-                       (corfu--match-symbol-p corfu-continue-commands this-command)
-                       (and
-                        ;; Check for empty input
-                        (or (not corfu--input) (< beg end))
-                        ;; Check separator or predicate
-                        (or (not corfu-quit-at-boundary)
-                            (and (eq corfu-quit-at-boundary 'separator)
-                                 (or (eq this-command #'corfu-insert-separator)
-                                     ;; with separator, any further chars allowed
-                                     (seq-contains-p (car corfu--input) corfu-separator)))
-                            (funcall completion-in-region-mode--predicate))))))
-           (corfu--update)
-           t)))
-      (corfu-quit))
-  (when corfu-auto (corfu--auto-post-command)))
+  (if (corfu--continue-p)
+      (corfu--exhibit)
+    (corfu-quit))
+  (when corfu-auto
+    (corfu--auto-post-command)))
 
 (defun corfu--goto (index)
   "Go to candidate with INDEX."
@@ -1124,8 +1126,10 @@ Quit if no candidate is selected."
           (when exit (funcall exit str 'finished))
           t)
       (`(,newstr . ,newpt)
-       (pcase-let ((`(,base ,candidates ,total . ,_)
-                    (corfu--recompute-state str pt table pred)))
+       (let* ((state (corfu--recompute str pt table pred))
+              (base (alist-get 'corfu--base state))
+              (total (alist-get 'corfu--total state))
+              (candidates (alist-get 'corfu--candidates state)))
          (unless (markerp beg) (setq beg (copy-marker beg)))
          (setq end (copy-marker end t)
                completion-in-region--data (list beg end table pred))
@@ -1191,7 +1195,7 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
                      table
                      (plist-get plist :predicate)))
          (corfu--setup)
-         (corfu--update))))))
+         (corfu--exhibit 'auto))))))
 
 (defun corfu--auto-post-command ()
   "Post command hook which initiates auto completion."
