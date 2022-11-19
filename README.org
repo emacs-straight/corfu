@@ -49,10 +49,11 @@ provides an alternative overlay-based display.
   arbitrary characters, after inserting a space via =M-SPC= (configurable via
   ~corfu-quit-at-boundary~ and ~corfu-separator~).
 - Deferred completion style highlighting for performance.
-- Support for candidate annotations and documentation in the echo area.
+- Support for candidate annotations (=annotation-function=, =affixation-function=).
 - Deprecated candidates are crossed out in the display.
 - Icons can be provided by an external package via margin formatter functions.
-- Extensions: Quick keys, Index keys, Sorting by history, Candidate documentation
+- Rich set of extensions: Quick keys, Index keys, Sorting by history, Candidate
+  documentation in echo area, popup or separate buffer
 
 * Installation and Configuration
 
@@ -82,7 +83,6 @@ Here is an example configuration:
     ;; (corfu-preview-current nil)    ;; Disable current candidate preview
     ;; (corfu-preselect-first nil)    ;; Disable candidate preselection
     ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
-    ;; (corfu-echo-documentation nil) ;; Disable documentation in the echo area
     ;; (corfu-scroll-margin 5)        ;; Use scroll margin
 
     ;; Enable Corfu only for certain modes.
@@ -229,7 +229,8 @@ effect.
   (defun corfu-enable-in-minibuffer ()
     "Enable Corfu in the minibuffer if `completion-at-point' is bound."
     (when (where-is-internal #'completion-at-point (list (current-local-map)))
-      ;; (setq-local corfu-auto nil) Enable/disable auto completion
+      ;; (setq-local corfu-auto nil) ;; Enable/disable auto completion
+      (setq-local corfu-echo-delay nil) ;; Disable echo
       (corfu-mode 1)))
   (add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
 #+end_src
@@ -445,13 +446,15 @@ be enabled manually if desired. Furthermore it is possible to install all of the
 files separately, both ~corfu.el~ and the ~corfu-*.el~ extensions. Currently the
 following extensions come with the Corfu ELPA package:
 
-- [[https://github.com/minad/corfu/blob/main/extensions/corfu-docframe.el][corfu-docframe]]: Display candidate documentation in a popup frame next to the
-  candidate menu.
+- [[https://github.com/minad/corfu/blob/main/extensions/corfu-echo.el][corfu-echo]]: =corfu-echo-mode= displays a brief candidate documentation in the
+  echo area.
 - [[https://github.com/minad/corfu/blob/main/extensions/corfu-history.el][corfu-history]]: =corfu-history-mode= remembers selected candidates and sorts the
   candidates by their history position.
 - [[https://github.com/minad/corfu/blob/main/extensions/corfu-indexed.el][corfu-indexed]]: =corfu-indexed-mode= allows you to select indexed candidates with
   prefix arguments.
 - [[https://github.com/minad/corfu/blob/main/extensions/corfu-info.el][corfu-info]]: Actions to access the candidate location and documentation.
+- [[https://github.com/minad/corfu/blob/main/extensions/corfu-popupinfo.el][corfu-popupinfo]]: Display candidate documentation or source in a popup next to
+  the candidate menu.
 - [[https://github.com/minad/corfu/blob/main/extensions/corfu-quick.el][corfu-quick]]: Commands to select using Avy-style quick keys.
 
 See the Commentary of those files for configuration details.
