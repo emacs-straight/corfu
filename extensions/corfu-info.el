@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.28"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.30"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -87,7 +87,7 @@
               (goto-char (point-min))
               (forward-line (1- (cdr loc))))
             (set-window-start nil (point)))))
-    (user-error "No candidate location available")))
+    (user-error "No location available")))
 
 ;; Emacs 28: Do not show Corfu commands with M-X
 (put #'corfu-info-location 'completion-predicate #'ignore)
