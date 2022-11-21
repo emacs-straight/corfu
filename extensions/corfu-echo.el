@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.30"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.31"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -67,7 +67,7 @@ floats to specify initial and subsequent delay."
     (cancel-timer corfu-echo--timer)
     (setq corfu-echo--timer nil))
   (corfu-echo--show msg)
-  (unless corfu--echo-message
+  (unless corfu-echo--message
     (kill-local-variable 'corfu-echo--timer)
     (kill-local-variable 'corfu-echo--message)))
 

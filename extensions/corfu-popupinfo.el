@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.30"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.31"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -152,27 +152,36 @@ all values are in pixels relative to the origin. See
 
 (defun corfu-popupinfo--get-location (candidate)
   "Get source at location of CANDIDATE."
-  (save-excursion
-    (when-let* ((fun (plist-get corfu--extra :company-location))
-                ;; BUG: company-location may throw errors if location is not found
-                (loc (ignore-errors (funcall fun candidate)))
-                (res (or (and (bufferp (car loc)) (car loc))
-                         (find-file-noselect (car loc) t))))
-      (with-current-buffer res
+  (let (cleanup)
+    (unwind-protect
         (save-excursion
-          (save-restriction
-            (widen)
-            (if (bufferp (car loc))
-                (goto-char (cdr loc))
-              (goto-char (point-min))
-              (forward-line (1- (cdr loc))))
-            (let ((beg (point)))
-              ;; Support a little bit of scrolling.
-              (forward-line (* 10 corfu-popupinfo-max-height))
-              (when jit-lock-mode
-                (jit-lock-fontify-now beg (point)))
-              (setq res (buffer-substring beg (point)))
-              (and (not (string-blank-p res)) res))))))))
+          (when-let* ((fun (plist-get corfu--extra :company-location))
+                      ;; BUG: company-location may throw errors if location is not found
+                      (loc (ignore-errors (funcall fun candidate)))
+                      (res (or (and (bufferp (car loc)) (car loc))
+                               (get-file-buffer (car loc))
+                               (let ((inhibit-message t)
+                                     (enable-dir-local-variables nil)
+                                     (enable-local-variables :safe)
+                                     (non-essential t)
+                                     (delay-mode-hooks t))
+                                 (setq cleanup (find-file-noselect (car loc) t))))))
+            (with-current-buffer res
+              (save-excursion
+                (save-restriction
+                  (widen)
+                  (if (bufferp (car loc))
+                      (goto-char (cdr loc))
+                    (goto-char (point-min))
+                    (forward-line (1- (cdr loc))))
+                  (let ((beg (point)))
+                    ;; Support a little bit of scrolling.
+                    (forward-line (* 10 corfu-popupinfo-max-height))
+                    (when jit-lock-mode
+                      (jit-lock-fontify-now beg (point)))
+                    (setq res (buffer-substring beg (point)))
+                    (and (not (string-blank-p res)) res)))))))
+      (when cleanup (kill-buffer cleanup)))))
 
 (defun corfu-popupinfo--get-documentation (candidate)
   "Get the documentation for CANDIDATE."
@@ -195,19 +204,19 @@ all values are in pixels relative to the origin. See
 (defun corfu-popupinfo--size ()
   "Return popup size as pair."
   (let* ((cw (default-font-width))
-         (margin (* cw (+ (alist-get 'left-margin-width corfu--buffer-parameters)
-                          (alist-get 'right-margin-width corfu--buffer-parameters))))
+         (margin (* cw (+ (alist-get 'left-margin-width corfu-popupinfo--buffer-parameters)
+                          (alist-get 'right-margin-width corfu-popupinfo--buffer-parameters))))
          (max-height (* (default-line-height) corfu-popupinfo-max-height))
          (max-width (+ margin (* cw corfu-popupinfo-max-width))))
-      (if corfu-popupinfo-resize
-          (with-current-buffer " *corfu-popupinfo*"
-            (cl-letf* (((window-dedicated-p) nil)
-                       ((window-buffer) (current-buffer))
-                       (size (window-text-pixel-size
-                              nil (point-min) (point-max)
-                              max-width max-height)))
-              (cons (min (+ margin (car size)) max-width)
-                    (min (cdr size) max-height))))
+    (if corfu-popupinfo-resize
+        (with-current-buffer " *corfu-popupinfo*"
+          (cl-letf* (((window-dedicated-p) nil)
+                     ((window-buffer) (current-buffer))
+                     (size (window-text-pixel-size
+                            nil (point-min) (point-max)
+                            max-width max-height)))
+            (cons (min (+ margin (car size)) max-width)
+                  (min (cdr size) max-height))))
       (cons max-width max-height))))
 
 (defun corfu-popupinfo--frame-geometry (frame)
@@ -347,14 +356,22 @@ the candidate popup, its value is 'bottom, 'top, 'right or 'left."
                        (and (not doc-changed)
                             (- (frame-pixel-width corfu-popupinfo--frame) border border))
                        (and (not doc-changed)
-                            (- (frame-pixel-height corfu-popupinfo--frame) border border)))))
+                            (- (frame-pixel-height corfu-popupinfo--frame) border border))))
+                     (margin-quirk (not corfu-popupinfo--frame)))
           (setq corfu-popupinfo--frame
                 (corfu--make-frame corfu-popupinfo--frame
                                    area-x area-y area-w area-h
                                    " *corfu-popupinfo*")
                 corfu-popupinfo--direction area-d
                 corfu-popupinfo--candidate candidate
-                corfu-popupinfo--coordinates new-coords))))))
+                corfu-popupinfo--coordinates new-coords)
+          ;; HACK: Force margin update. For some reason, the call to
+          ;; `set-window-buffer' in `corfu--make-frame' is not effective the
+          ;; first time. Why does Emacs have all these quirks?
+          (when margin-quirk
+            (set-window-buffer
+             (frame-root-window corfu-popupinfo--frame)
+             " *corfu-popupinfo*")))))))
 
 (defun corfu-popupinfo--hide ()
   "Clear the info popup buffer content and hide it."
@@ -364,7 +381,8 @@ the candidate popup, its value is 'bottom, 'top, 'right or 'left."
   "Scroll text of info popup window upward N lines.
 
 If ARG is omitted or nil, scroll upward by a near full screen.
-See `scroll-up' for details."
+See `scroll-up' for details. If the info popup is not visible,
+the other window is scrolled."
   (interactive "p")
   (if (corfu-popupinfo--visible-p)
       (with-selected-frame corfu-popupinfo--frame
@@ -375,7 +393,7 @@ See `scroll-up' for details."
 (defun corfu-popupinfo-scroll-down (&optional n)
   "Scroll text of info popup window down N lines.
 
-If ARG is omitted or nil, scroll down by a near full screen."
+See `corfu-popupinfo-scroll-up' for more details."
   (interactive "p")
   (corfu-popupinfo-scroll-up (- (or n 1))))
 

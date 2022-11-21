@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.30"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.31"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -124,7 +124,8 @@ TWO is non-nil if two keys should be displayed."
 (defun corfu-quick-jump ()
   "Jump to candidate using quick keys."
   (interactive)
-  (corfu--echo-cancel)
+  (when (fboundp 'corfu-echo--cancel)
+    (corfu-echo--cancel))
   (if (= corfu--total 0)
       (and (message "No match") nil)
     (let ((idx (corfu-quick--read)))
