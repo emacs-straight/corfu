@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.31"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.33"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -54,7 +54,7 @@
   "Face used for the info popup."
   :group 'corfu-faces)
 
-(defcustom corfu-popupinfo-delay '(1.0 . 0.5)
+(defcustom corfu-popupinfo-delay '(2.0 . 1.0)
   "Automatically update info popup after that number of seconds.
 
 Set to t for an instant update. The value can be a pair of two
@@ -326,7 +326,7 @@ the candidate popup, its value is 'bottom, 'top, 'right or 'left."
   (when corfu-popupinfo--timer
     (cancel-timer corfu-popupinfo--timer)
     (setq corfu-popupinfo--timer nil))
-  (when (and (corfu--popup-support-p) (corfu-popupinfo--visible-p corfu--frame))
+  (when (and (corfu-popupinfo--visible-p corfu--frame))
     (let* ((doc-changed
             (not (and (corfu-popupinfo--visible-p)
                       (equal candidate corfu-popupinfo--candidate))))
@@ -362,6 +362,7 @@ the candidate popup, its value is 'bottom, 'top, 'right or 'left."
                 (corfu--make-frame corfu-popupinfo--frame
                                    area-x area-y area-w area-h
                                    " *corfu-popupinfo*")
+                corfu-popupinfo--toggle t
                 corfu-popupinfo--direction area-d
                 corfu-popupinfo--candidate candidate
                 corfu-popupinfo--coordinates new-coords)
@@ -434,29 +435,30 @@ not be displayed until this command is called again, even if
 
 (defun corfu-popupinfo--exhibit (&rest _)
   "Update the info popup automatically."
-  (add-to-list 'minor-mode-overriding-map-alist
-               `(,#'corfu-popupinfo-mode . ,corfu-popupinfo-map))
-  (if (and (>= corfu--index 0) (corfu-popupinfo--visible-p corfu--frame))
-      (when-let* ((delay (if (consp corfu-popupinfo-delay)
-                             (funcall (if (corfu-popupinfo--visible-p) #'cdr #'car)
-                                      corfu-popupinfo-delay)
-                           corfu-popupinfo-delay))
-                  (corfu-popupinfo--toggle))
-        (when corfu-popupinfo--timer
-          (cancel-timer corfu-popupinfo--timer)
-          (setq corfu-popupinfo--timer nil))
-        (let ((candidate (nth corfu--index corfu--candidates)))
-          (if (or (eq delay t) (<= delay 0)
-                  (equal candidate corfu-popupinfo--candidate))
-              (corfu-popupinfo--show candidate)
-            (cond
-             (corfu-popupinfo-hide
-              (corfu-popupinfo--hide))
-             (corfu-popupinfo--candidate
-              (corfu-popupinfo--show corfu-popupinfo--candidate)))
-            (setq corfu-popupinfo--timer
-                  (run-at-time delay nil #'corfu-popupinfo--show candidate)))))
-    (corfu-popupinfo--hide)))
+  (when completion-in-region-mode
+    (setf (alist-get #'corfu-popupinfo-mode minor-mode-overriding-map-alist)
+          corfu-popupinfo-map)
+    (when corfu-popupinfo--timer
+      (cancel-timer corfu-popupinfo--timer)
+      (setq corfu-popupinfo--timer nil))
+    (if (and (>= corfu--index 0) (corfu-popupinfo--visible-p corfu--frame))
+        (when-let* ((delay (if (consp corfu-popupinfo-delay)
+                               (funcall (if (eq corfu-popupinfo--toggle 'init) #'car #'cdr)
+                                        corfu-popupinfo-delay)
+                             corfu-popupinfo-delay))
+                    (corfu-popupinfo--toggle))
+          (let ((candidate (nth corfu--index corfu--candidates)))
+            (if (or (eq delay t) (<= delay 0)
+                    (equal candidate corfu-popupinfo--candidate))
+                (corfu-popupinfo--show candidate)
+              (cond
+               (corfu-popupinfo-hide
+                (corfu-popupinfo--hide))
+               (corfu-popupinfo--candidate
+                (corfu-popupinfo--show corfu-popupinfo--candidate)))
+              (setq corfu-popupinfo--timer
+                    (run-at-time delay nil #'corfu-popupinfo--show candidate)))))
+      (corfu-popupinfo--hide))))
 
 (defun corfu-popupinfo--teardown ()
   "Teardown the info popup state."

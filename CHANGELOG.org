@@ -2,6 +2,10 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Version 0.33 (2022-11-21)
+
+- =corfu-popupinfo=: Bugfixes
+
 * Version 0.31 (2022-11-20)
 
 - =corfu-echo=, =corfu-quick=: Bugfixes for interaction issue.

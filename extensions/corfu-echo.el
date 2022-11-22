@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (corfu "0.31"))
+;; Package-Requires: ((emacs "27.1") (corfu "0.33"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -39,7 +39,7 @@
   "Face used for echo area messages."
   :group 'corfu-faces)
 
-(defcustom corfu-echo-delay '(1.0 . 0.5)
+(defcustom corfu-echo-delay '(2.0 . 1.0)
   "Show documentation string in the echo area after that number of seconds.
 Set to t for an instant message. The value can be a pair of two
 floats to specify initial and subsequent delay."
