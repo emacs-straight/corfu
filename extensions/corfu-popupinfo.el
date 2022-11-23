@@ -93,6 +93,18 @@ popup can be requested manually via `corfu-popupinfo-toggle',
   :type 'boolean
   :group 'corfu)
 
+;; TODO Not yet fully supported.
+(defcustom corfu-popupinfo-direction 'horizontal
+  "Preferred direction for the popup."
+  :type '(choice (const horizontal)
+                 (const vertical)
+                 ;; TODO always-* are unsupported
+                 (const always-horizontal)
+                 (const always-vertical)
+                 (const always-left)
+                 (const always-right))
+  :group 'corfu)
+
 (defvar corfu-popupinfo-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\M-d" #'corfu-popupinfo-documentation)
@@ -134,13 +146,13 @@ The coordinates list has the form (LEFT TOP RIGHT BOTTOM) where
 all values are in pixels relative to the origin. See
 `frame-edges' for details.")
 
-(defvar-local corfu-popupinfo--direction nil
-  "Position direction of the info popup relative to the candidate popup.")
+(defvar-local corfu-popupinfo--lock-dir nil
+  "Locked position direction of the info popup.")
 
 (defconst corfu-popupinfo--state-vars
   '(corfu-popupinfo--candidate
     corfu-popupinfo--coordinates
-    corfu-popupinfo--direction
+    corfu-popupinfo--lock-dir
     corfu-popupinfo--toggle
     corfu-popupinfo--function)
   "Buffer-local state variables used by corfu-popupinfo.")
@@ -152,36 +164,40 @@ all values are in pixels relative to the origin. See
 
 (defun corfu-popupinfo--get-location (candidate)
   "Get source at location of CANDIDATE."
-  (let (cleanup)
-    (unwind-protect
-        (save-excursion
+  (save-excursion
+    (let ((old-buffers (buffer-list)) (buffer nil))
+      (unwind-protect
           (when-let* ((fun (plist-get corfu--extra :company-location))
                       ;; BUG: company-location may throw errors if location is not found
                       (loc (ignore-errors (funcall fun candidate)))
-                      (res (or (and (bufferp (car loc)) (car loc))
-                               (get-file-buffer (car loc))
-                               (let ((inhibit-message t)
-                                     (enable-dir-local-variables nil)
-                                     (enable-local-variables :safe)
-                                     (non-essential t)
-                                     (delay-mode-hooks t))
-                                 (setq cleanup (find-file-noselect (car loc) t))))))
-            (with-current-buffer res
+                      ((setq buffer
+                             (or (and (bufferp (car loc)) (car loc))
+                                 (get-file-buffer (car loc))
+                                 (let ((inhibit-message t)
+                                       (enable-dir-local-variables nil)
+                                       (enable-local-variables :safe)
+                                       (non-essential t)
+                                       (delay-mode-hooks t)
+                                       (find-file-hook '(global-font-lock-mode-check-buffers)))
+                                   (find-file-noselect (car loc) t))))))
+            (with-current-buffer buffer
               (save-excursion
                 (save-restriction
                   (widen)
-                  (if (bufferp (car loc))
-                      (goto-char (cdr loc))
-                    (goto-char (point-min))
-                    (forward-line (1- (cdr loc))))
+                  (goto-char (point-min))
+                  (when-let (pos (cdr loc))
+                    (if (bufferp (car loc))
+                        (goto-char pos)
+                      (forward-line (1- pos))))
                   (let ((beg (point)))
                     ;; Support a little bit of scrolling.
                     (forward-line (* 10 corfu-popupinfo-max-height))
                     (when jit-lock-mode
                       (jit-lock-fontify-now beg (point)))
-                    (setq res (buffer-substring beg (point)))
-                    (and (not (string-blank-p res)) res)))))))
-      (when cleanup (kill-buffer cleanup)))))
+                    (let ((res (buffer-substring beg (point))))
+                      (and (not (string-blank-p res)) res)))))))
+        (when (and buffer (not (memq buffer old-buffers)))
+          (kill-buffer buffer))))))
 
 (defun corfu-popupinfo--get-documentation (candidate)
   "Get the documentation for CANDIDATE."
@@ -207,17 +223,19 @@ all values are in pixels relative to the origin. See
          (margin (* cw (+ (alist-get 'left-margin-width corfu-popupinfo--buffer-parameters)
                           (alist-get 'right-margin-width corfu-popupinfo--buffer-parameters))))
          (max-height (* (default-line-height) corfu-popupinfo-max-height))
-         (max-width (+ margin (* cw corfu-popupinfo-max-width))))
-    (if corfu-popupinfo-resize
-        (with-current-buffer " *corfu-popupinfo*"
-          (cl-letf* (((window-dedicated-p) nil)
-                     ((window-buffer) (current-buffer))
-                     (size (window-text-pixel-size
-                            nil (point-min) (point-max)
-                            max-width max-height)))
-            (cons (min (+ margin (car size)) max-width)
-                  (min (cdr size) max-height))))
-      (cons max-width max-height))))
+         (max-width (* cw corfu-popupinfo-max-width)))
+    (or (when corfu-popupinfo-resize
+          (with-current-buffer " *corfu-popupinfo*"
+            (cl-letf* (((window-dedicated-p) nil)
+                       ((window-buffer) (current-buffer))
+                       (size (window-text-pixel-size
+                              nil (point-min) (point-max)
+                              max-width max-height)))
+              ;; Check that width is not exceeded. Otherwise use full height,
+              ;; since lines will get wrapped.
+              (when (<= (car size) max-width)
+                (cons (+ margin (car size)) (min (cdr size) max-height))))))
+        (cons (+ margin max-width) max-height))))
 
 (defun corfu-popupinfo--frame-geometry (frame)
   "Return position and size geometric attributes of FRAME.
@@ -257,9 +275,7 @@ relative to the candidate popup, its value can be 'right or 'left."
 
 The WIDTH and HEIGHT of the info popup are in pixels.
 
-The calculated area is in the form (X Y WIDTH HEIGHT DIR).
-DIR indicates the vertical position direction of the info popup
-relative to the candidate popup, its value can be 'bottom or 'top."
+The calculated area is in the form (X Y WIDTH HEIGHT 'vertical)."
   (pcase-let* ((border (alist-get 'child-frame-border-width corfu--frame-parameters))
                (lh (default-line-height))
                (`(,_pfx ,_pfy ,pfw ,pfh)
@@ -280,46 +296,54 @@ relative to the candidate popup, its value can be 'bottom or 'top."
     (if cf-on-cursor-bottom
         (progn
           (setq height (min h-remaining-bottom height)
-                height (min height (* (floor (/ height lh)) lh)))
-          (list cfx y-on-bottom w-avail height 'bottom))
+                ;;height (min height (* (floor (/ height lh)) lh))
+                )
+          (list cfx y-on-bottom w-avail height 'vertical))
       (setq height (min h-remaining-top height)
-            height (min height (* (floor (/ height lh)) lh)))
+            ;;height (min height (* (floor (/ height lh)) lh))
+            )
       (list cfx
             (max 0 (- cfy height border))
-            w-avail height 'top))))
+            w-avail height 'vertical))))
 
 (defun corfu-popupinfo--display-area (dir width height)
   "Calculate the display area for the info popup.
 
 If DIR is non-nil, the display area in the corresponding
-direction is calculated first, its value can be 'bottom,
-'top,'right or 'left.
+direction is calculated first, its value can be 'vertical, 'right
+or 'left.
 
 The pixel size of the info popup can be specified by WIDTH and HEIGHT.
 
 The calculated area is in the form (X Y WIDTH HEIGHT DIR).
 DIR indicates the position direction of the info popup relative to
-the candidate popup, its value is 'bottom, 'top, 'right or 'left."
+the candidate popup, its value is 'vertical, 'right or 'left."
   (unless (and width height)
     (let ((size (corfu-popupinfo--size)))
       (setq width (car size)
             height (cdr size))))
-  ;; TODO Direction handling is incomplete. Fix not only horizontal/vertical,
-  ;; but left/right/bottom/top.
   (cond
-   ((memq dir '(right left))
+   ((or (eq dir 'right) (eq dir 'left))
+    ;; TODO Direction handling is incomplete. Fix not only horizontal,
+    ;; but also left or right.
     (corfu-popupinfo--display-area-horizontal width height))
-   ((memq dir '(bottom top))
+   ((eq dir 'vertical)
     (corfu-popupinfo--display-area-vertical width height))
    (t
     (pcase-let* (((and h-a `(,_h-x ,_h-y ,h-w ,h-h ,_h-d))
                   (corfu-popupinfo--display-area-horizontal width height))
                  ((and v-a `(,_v-x ,_v-y ,v-w ,v-h ,_v-d))
                   (corfu-popupinfo--display-area-vertical width height)))
-      (if (and (or (< h-h height) (< h-w width))
-               (or (>= (* v-w v-h) (* h-w h-h))
-                   (and (>= v-h height) (>= v-w width))))
-          v-a h-a)))))
+      (pcase corfu-popupinfo-direction
+        ;; TODO Add proper support for corfu-popupinfo-direction 'always-left,
+        ;; 'always-right.
+        ('always-left       h-a)
+        ('always-right      h-a)
+        ('always-horizontal h-a)
+        ('always-vertical   v-a)
+        ((and 'horizontal (guard (>= h-h height)) (guard (>= h-w width))) h-a)
+        ((and 'vertical   (guard (>= v-h height)) (guard (>= v-w width))) v-a)
+        (_ (if (>= (* v-w v-h) (* h-w h-h)) v-a h-a)))))))
 
 (defun corfu-popupinfo--show (candidate)
   "Show the info popup for CANDIDATE."
@@ -347,12 +371,12 @@ the candidate popup, its value is 'bottom, 'top, 'right or 'left."
             (message "No %s available"
                      (car (last (split-string (symbol-name corfu-popupinfo--function) "-+")))))
           (corfu-popupinfo--hide)
-          (setq doc-changed nil coords-changed nil corfu-popupinfo--toggle nil)))
+          (setq doc-changed nil coords-changed nil)))
       (when (or doc-changed coords-changed)
         (pcase-let* ((border (alist-get 'child-frame-border-width corfu--frame-parameters))
                      (`(,area-x ,area-y ,area-w ,area-h ,area-d)
                       (corfu-popupinfo--display-area
-                       corfu-popupinfo--direction
+                       corfu-popupinfo--lock-dir
                        (and (not doc-changed)
                             (- (frame-pixel-width corfu-popupinfo--frame) border border))
                        (and (not doc-changed)
@@ -363,7 +387,7 @@ the candidate popup, its value is 'bottom, 'top, 'right or 'left."
                                    area-x area-y area-w area-h
                                    " *corfu-popupinfo*")
                 corfu-popupinfo--toggle t
-                corfu-popupinfo--direction area-d
+                corfu-popupinfo--lock-dir area-d
                 corfu-popupinfo--candidate candidate
                 corfu-popupinfo--coordinates new-coords)
           ;; HACK: Force margin update. For some reason, the call to
