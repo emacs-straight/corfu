@@ -219,9 +219,10 @@ all values are in pixels relative to the origin. See
 (defun corfu-popupinfo--size ()
   "Return popup size as pair."
   (let* ((cw (default-font-width))
+         (lh (default-line-height))
          (margin (* cw (+ (alist-get 'left-margin-width corfu-popupinfo--buffer-parameters)
                           (alist-get 'right-margin-width corfu-popupinfo--buffer-parameters))))
-         (max-height (* (default-line-height) corfu-popupinfo-max-height))
+         (max-height (* lh corfu-popupinfo-max-height))
          (max-width (* cw corfu-popupinfo-max-width)))
     (or (when corfu-popupinfo-resize
           (with-current-buffer " *corfu-popupinfo*"
@@ -233,7 +234,13 @@ all values are in pixels relative to the origin. See
               ;; Check that width is not exceeded. Otherwise use full height,
               ;; since lines will get wrapped.
               (when (<= (car size) max-width)
-                (cons (+ margin (car size)) (min (cdr size) max-height))))))
+                (cons (+ margin (car size))
+                      ;; XXX HACK: Ensure that popup has at least a height of 1,
+                      ;; which is the minimum frame height (#261). Maybe we
+                      ;; should ask upstream how smaller frames can be created.
+                      ;; I only managed to create smaller frames by setting
+                      ;; `window-safe-min-height' to 0, which feels problematic.
+                      (min (max (cdr size) lh) max-height))))))
         (cons (+ margin max-width) max-height))))
 
 (defun corfu-popupinfo--frame-geometry (frame)
@@ -250,7 +257,7 @@ in the form of (X Y WIDTH HEIGHT)."
 The WIDTH and HEIGHT of the info popup are in pixels.
 The calculated area is in the form (X Y WIDTH HEIGHT DIR).
 DIR indicates the horizontal position direction of the info popup
-relative to the candidate popup, its value can be 'right or 'left."
+relative to the candidate popup, its value can be right or left."
   (pcase-let* ((border (alist-get 'child-frame-border-width corfu--frame-parameters))
                (`(,_pfx ,_pfy ,pfw ,_pfh)
                 (corfu-popupinfo--frame-geometry (frame-parent corfu--frame)))
@@ -274,7 +281,7 @@ relative to the candidate popup, its value can be 'right or 'left."
 
 The WIDTH and HEIGHT of the info popup are in pixels.
 
-The calculated area is in the form (X Y WIDTH HEIGHT 'vertical)."
+The calculated area is in the form (X Y WIDTH HEIGHT DIR)."
   (pcase-let* ((border (alist-get 'child-frame-border-width corfu--frame-parameters))
                (lh (default-line-height))
                (`(,_pfx ,_pfy ,pfw ,pfh)
@@ -299,14 +306,10 @@ The calculated area is in the form (X Y WIDTH HEIGHT 'vertical)."
   "Calculate the display area for the info popup.
 
 If DIR is non-nil, the display area in the corresponding
-direction is calculated first, its value can be 'vertical, 'right
-or 'left.
-
-The pixel size of the info popup can be specified by WIDTH and HEIGHT.
-
-The calculated area is in the form (X Y WIDTH HEIGHT DIR).
-DIR indicates the position direction of the info popup relative to
-the candidate popup, its value is 'vertical, 'right or 'left."
+direction is calculated first, its value can be vertical, right
+or left. The pixel size of the info popup can be specified by
+WIDTH and HEIGHT. The calculated area is in the form (X Y WIDTH
+HEIGHT DIR)."
   (unless (and width height)
     (let ((size (corfu-popupinfo--size)))
       (setq width (car size)
@@ -379,7 +382,7 @@ the candidate popup, its value is 'vertical, 'right or 'left."
                 corfu-popupinfo--lock-dir area-d
                 corfu-popupinfo--candidate candidate
                 corfu-popupinfo--coordinates new-coords)
-          ;; HACK: Force margin update. For some reason, the call to
+          ;; XXX HACK: Force margin update. For some reason, the call to
           ;; `set-window-buffer' in `corfu--make-frame' is not effective the
           ;; first time. Why does Emacs have all these quirks?
           (when margin-quirk

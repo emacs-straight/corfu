@@ -18,7 +18,7 @@ Corfu is a small package, which relies on the Emacs completion facilities and
 concentrates on providing a polished completion UI. Completions are either
 provided by commands like ~dabbrev-completion~ or by pluggable backends
 (~completion-at-point-functions~, Capfs). Most programming language major modes
-implement a Capf. Furthermore the language server packages, [[https://github.com/joaotavora/eglot][Eglot]] and [[https://github.com/emacs-lsp/lsp-mode][Lsp-mode]],
+implement a Capf. Furthermore the language server packages, Eglot and Lsp-mode,
 use Capfs which talk to the LSP server to retrieve the completions. Corfu does
 not include its own completion backends. The Emacs built-in Capfs and the Capfs
 provided by other programming language packages are usually sufficient. A few
@@ -159,10 +159,10 @@ files can be opened at once with =find-file= if you enter a wildcard. You may al
 give the =initials= completion style a try.
 
 See also the [[https://github.com/minad/corfu/wiki][Corfu Wiki]] and the [[https://github.com/minad/cape][Cape manual]] for additional Capf configuration
-tips. The Lsp-mode configuration is documented in the wiki. For more general
-documentation read the chapter about completion in the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Completion.html][Emacs manual]]. If you want
-to create your own Capfs, you can find documentation about completion in the
-[[https://www.gnu.org/software/emacs/manual/html_node/elisp/Completion.html][Elisp manual]].
+tips. The Eglot and Lsp-mode configurations are documented in the wiki. For more
+general documentation read the chapter about completion in the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Completion.html][Emacs manual]]. If
+you want to create your own Capfs, you can find documentation about completion
+in the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Completion.html][Elisp manual]].
 
 ** Auto completion
 
