@@ -26,10 +26,6 @@
 
 ;;; Commentary:
 
-;; NOTE: This extension has been added recently to Corfu. It is still
-;; experimental. The extension may get renamed and the public interface
-;; may change any time.
-;;
 ;; Display an information popup for completion candidate when using
 ;; Corfu. The popup displays either the candidate documentation or the
 ;; candidate location. The `corfu-popupinfo-mode' must be enabled
@@ -263,9 +259,9 @@ relative to the candidate popup, its value can be right or left."
                 (corfu-popupinfo--frame-geometry (frame-parent corfu--frame)))
                (`(,cfx ,cfy ,cfw ,_cfh) (corfu-popupinfo--frame-geometry corfu--frame))
                (x-on-right (+ cfx cfw (- border)))
-               (x-on-left (- cfx width border))
-               (w-remaining-right (- pfw 1 x-on-right border border))
-               (w-remaining-left (- cfx 1 border)))
+               (x-on-left (max 0 (- cfx width border)))
+               (w-remaining-right (- pfw x-on-right border border))
+               (w-remaining-left (- cfx border)))
     (cond
      ((>= w-remaining-right width)
       (list x-on-right cfy width height 'right))
