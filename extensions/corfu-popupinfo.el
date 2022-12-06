@@ -287,18 +287,27 @@ form (X Y WIDTH HEIGHT DIR)."
                (`(,_pfx ,_pfy ,pfw ,pfh)
                 (corfu-popupinfo--frame-geometry (frame-parent corfu--frame)))
                (`(,cfx ,cfy ,cfw ,cfh) (corfu-popupinfo--frame-geometry corfu--frame))
+               ;; Candidates popup below input
+               (below (>= cfy (+ lh (cadr (window-inside-pixel-edges))
+                                 (window-tab-line-height)
+                                 (or (cdr (posn-x-y (posn-at-point (point)))) 0))))
+               ;; Popups aligned at top
+               (top-aligned (or below (< (cdr ps) cfh)))
                ;; Left display area
-               (al (list (max 0 (- cfx (car ps) border)) cfy
-                         (min (- cfx border) (car ps)) (cdr ps) 'left))
+               (ahy (if top-aligned
+                        cfy
+                      (max 0 (- (+ cfy cfh) border border (cdr ps)))))
+               (ahh (if top-aligned
+                        (min (- pfh cfy) (cdr ps))
+                      (min (- (+ cfy cfh) border border) (cdr ps))))
+               (al (list (max 0 (- cfx (car ps) border)) ahy
+                         (min (- cfx border) (car ps)) ahh 'left))
                ;; Right display area
                (arx (+ cfx cfw (- border)))
-               (ar (list arx cfy (min (- pfw arx border border) (car ps))
-                         (cdr ps) 'right))
+               (ar (list arx ahy (min (- pfw arx border border) (car ps)) ahh 'right))
                ;; Vertical display area
                (avw (min (car ps) (- pfw cfx border border)))
-               (av (if (>= cfy (+ lh (cadr (window-inside-pixel-edges))
-                                  (window-tab-line-height)
-                                  (or (cdr (posn-x-y (posn-at-point (point)))) 0)))
+               (av (if below
                        (list cfx (+ cfy cfh (- border)) avw (min (- pfh cfy cfh border) (cdr ps)) 'vertical)
                      (let ((h (min (- cfy border border) (cdr ps))))
                        (list cfx (max 0 (- cfy h border)) avw h 'vertical)))))
@@ -397,7 +406,7 @@ visible, the other window is moved to beginning or end."
 (defun corfu-popupinfo-beginning (&optional n)
   "Scroll text of info popup window to beginning of buffer.
 
-See `corfu-popupinfo-end-of-buffer' for the argument N."
+See `corfu-popupinfo-end' for the argument N."
   (interactive "P")
   (corfu-popupinfo-end (- 10 (if (numberp n) n 0))))
 
