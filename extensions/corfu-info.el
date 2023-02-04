@@ -27,7 +27,7 @@
 ;;; Commentary:
 
 ;; This Corfu extension provides commands to show additional information to the
-;; candidates in a separate buffer. The commands `corfu-info-location' and
+;; candidates in a separate buffer.  The commands `corfu-info-location' and
 ;; `corfu-info-documentation' are bound by default in the `corfu-map' to M-g and
 ;; M-h respectively.
 
@@ -60,8 +60,8 @@
   (when (< corfu--index 0)
     (user-error "No candidate selected"))
   (let ((cand (nth corfu--index corfu--candidates)))
-    (if-let* ((fun (plist-get corfu--extra :company-doc-buffer))
-              (res (funcall fun cand)))
+    (if-let ((fun (plist-get corfu--extra :company-doc-buffer))
+             (res (funcall fun cand)))
         (let ((buf (or (car-safe res) res)))
           (corfu-info--restore-on-next-command)
           (setq other-window-scroll-buffer (get-buffer buf))
@@ -77,8 +77,8 @@
     (user-error "No candidate selected"))
   (let ((cand (nth corfu--index corfu--candidates)))
     ;; BUG: company-location may throw errors if location is not found
-    (if-let* ((fun (ignore-errors (plist-get corfu--extra :company-location)))
-              (loc (funcall fun cand)))
+    (if-let ((fun (ignore-errors (plist-get corfu--extra :company-location)))
+             (loc (funcall fun cand)))
         (let ((buf (or (and (bufferp (car loc)) (car loc))
                        (find-file-noselect (car loc) t))))
           (corfu-info--restore-on-next-command)

@@ -27,7 +27,7 @@
 ;;; Commentary:
 
 ;; Enable `corfu-history-mode' to sort candidates by their history
-;; position. Maintain a list of recently selected candidates. In order
+;; position.  Maintain a list of recently selected candidates.  In order
 ;; to save the history across Emacs sessions, enable `savehist-mode' and
 ;; add `corfu-history' to `savehist-additional-variables'.
 ;;
@@ -76,8 +76,7 @@
   (cl-loop for cand on candidates do (setcar cand (caar cand)))
   candidates)
 
-(defun corfu-history--insert (&rest _)
-  "Advice for `corfu--insert'."
+(cl-defmethod corfu--insert :before (_status &context (corfu-history-mode (eql t)))
   (when (>= corfu--index 0)
     (add-to-history 'corfu-history
                     (substring-no-properties
@@ -88,15 +87,10 @@
 ;;;###autoload
 (define-minor-mode corfu-history-mode
   "Update Corfu history and sort completions by history."
-  :global t
-  :group 'corfu
-  (cond
-   (corfu-history-mode
-    (setq corfu-sort-function #'corfu-history--sort)
-    (advice-add #'corfu--insert :before #'corfu-history--insert))
-   (t
-    (setq corfu-sort-function #'corfu-sort-length-alpha)
-    (advice-remove #'corfu--insert #'corfu-history--insert))))
+  :global t :group 'corfu
+  (if corfu-history-mode
+      (add-function :override corfu-sort-function #'corfu-history--sort)
+    (remove-function corfu-sort-function #'corfu-history--sort)))
 
 (provide 'corfu-history)
 ;;; corfu-history.el ends here

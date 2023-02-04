@@ -27,8 +27,8 @@
 ;;; Commentary:
 
 ;; This package is a Corfu extension, which prefixes candidates with indices if
-;; enabled via `corfu-indexed-mode'. It allows you to select candidates with
-;; prefix arguments. This is designed to be a faster alternative to selecting a
+;; enabled via `corfu-indexed-mode'.  It allows you to select candidates with
+;; prefix arguments.  This is designed to be a faster alternative to selecting a
 ;; candidate with `corfu-next' and `corfu-previous'.
 
 ;;; Code:
@@ -56,11 +56,22 @@
   '(corfu-insert corfu-complete)
   "Commands that should be indexed.")
 
-(defun corfu-indexed--affixate (cands)
-  "Advice for `corfu--affixate' which prefixes the CANDS with an index."
-  (setq cands (cdr cands))
+(cl-defmethod corfu--prepare :before (&context (corfu-indexed-mode (eql t)))
+  (when (and prefix-arg (memq this-command corfu-indexed--commands))
+    (let ((index (+ corfu--scroll
+                    (- (prefix-numeric-value prefix-arg)
+                       corfu-indexed-start))))
+      (if (and (>= index 0)
+               (< index corfu--total)
+               (< index (+ corfu--scroll corfu-count)))
+          (setq corfu--index index)
+        (message "Out of range")
+        (setq this-command #'ignore)))))
+
+(cl-defmethod corfu--affixate :around (cands &context (corfu-indexed-mode (eql t)))
+  (setq cands (cdr (cl-call-next-method cands)))
   (let* ((space #(" " 0 1 (face (:height 0.5 :inherit corfu-indexed))))
-         (width (if (> (+ corfu-indexed-start (length cands)) 10) 2 1))
+         (width (if (length> cands (- 10 corfu-indexed-start)) 2 1))
          (fmt (concat space
                       (propertize (format "%%%ds" width)
                                   'face 'corfu-indexed)
@@ -77,32 +88,10 @@
              (cadr cand))))
     (cons t cands)))
 
-(defun corfu-indexed--handle-prefix (orig &rest args)
-  "Handle prefix argument before calling ORIG function with ARGS."
-  (if (and current-prefix-arg (called-interactively-p t))
-      (let ((corfu--index (+ corfu--scroll
-                             (- (prefix-numeric-value current-prefix-arg)
-                                corfu-indexed-start))))
-        (if (or (< corfu--index 0)
-                (>= corfu--index corfu--total)
-                (>= corfu--index (+ corfu--scroll corfu-count)))
-            (message "Out of range")
-          (funcall orig)))
-    (apply orig args)))
-
 ;;;###autoload
 (define-minor-mode corfu-indexed-mode
   "Prefix candidates with indices."
-  :global t :group 'corfu
-  (cond
-   (corfu-indexed-mode
-    (advice-add #'corfu--affixate :filter-return #'corfu-indexed--affixate)
-    (dolist (cmd corfu-indexed--commands)
-      (advice-add cmd :around #'corfu-indexed--handle-prefix)))
-   (t
-    (advice-remove #'corfu--affixate #'corfu-indexed--affixate)
-    (dolist (cmd corfu-indexed--commands)
-      (advice-remove cmd #'corfu-indexed--handle-prefix)))))
+  :global t :group 'corfu)
 
 (provide 'corfu-indexed)
 ;;; corfu-indexed.el ends here
