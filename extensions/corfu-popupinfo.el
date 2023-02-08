@@ -114,9 +114,9 @@ popup can be requested manually via `corfu-popupinfo-toggle',
 
 (defvar-keymap corfu-popupinfo-map
   :doc "Additional keymap activated in popupinfo mode."
-  "M-d" #'corfu-popupinfo-documentation
-  "M-l" #'corfu-popupinfo-location
   "M-t" #'corfu-popupinfo-toggle
+  "<remap> <corfu-info-documentation>" #'corfu-popupinfo-documentation
+  "<remap> <corfu-info-location>" #'corfu-popupinfo-location
   "<remap> <scroll-other-window>" #'corfu-popupinfo-scroll-up
   "<remap> <scroll-other-window-down>" #'corfu-popupinfo-scroll-down
   "<remap> <end-of-buffer-other-window>" #'corfu-popupinfo-end
@@ -174,20 +174,21 @@ all values are in pixels relative to the origin.  See
   (save-excursion
     (let ((old-buffers (buffer-list)) (buffer nil))
       (unwind-protect
-          (when-let ((fun (plist-get corfu--extra :company-location))
-                     ;; BUG: company-location may throw errors if location is not found
-                     (loc (ignore-errors (funcall fun candidate)))
-                     ((setq buffer
-                            (or (and (bufferp (car loc)) (car loc))
-                                (get-file-buffer (car loc))
-                                (let ((inhibit-message t)
-                                      (inhibit-redisplay t)
-                                      (enable-dir-local-variables nil)
-                                      (enable-local-variables :safe)
-                                      (non-essential t)
-                                      (delay-mode-hooks t)
-                                      (find-file-hook '(global-font-lock-mode-check-buffers)))
-                                  (find-file-noselect (car loc) t))))))
+          (when-let
+              ((fun (plist-get corfu--extra :company-location))
+               ;; BUG: company-location may throw errors if location is not found
+               (loc (ignore-errors (funcall fun candidate)))
+               ((setq buffer
+                      (or (and (bufferp (car loc)) (car loc))
+                          (get-file-buffer (car loc))
+                          (let ((inhibit-message t)
+                                (inhibit-redisplay t)
+                                (enable-dir-local-variables nil)
+                                (enable-local-variables :safe)
+                                (non-essential t)
+                                (delay-mode-hooks t)
+                                (find-file-hook '(global-font-lock-mode-check-buffers)))
+                            (find-file-noselect (car loc) t))))))
             (with-current-buffer buffer
               (save-excursion
                 (save-restriction
@@ -230,8 +231,9 @@ all values are in pixels relative to the origin.  See
   "Return popup size as pair."
   (let* ((cw (default-font-width))
          (lh (default-line-height))
-         (margin (* cw (+ (alist-get 'left-margin-width corfu-popupinfo--buffer-parameters)
-                          (alist-get 'right-margin-width corfu-popupinfo--buffer-parameters))))
+         (margin
+          (* cw (+ (alist-get 'left-margin-width corfu-popupinfo--buffer-parameters)
+                   (alist-get 'right-margin-width corfu-popupinfo--buffer-parameters))))
          (max-height (* lh corfu-popupinfo-max-height))
          (max-width (* cw corfu-popupinfo-max-width)))
     (or (when corfu-popupinfo-resize
@@ -240,7 +242,9 @@ all values are in pixels relative to the origin.  See
                        ((window-buffer) (current-buffer))
                        (size (window-text-pixel-size
                               nil (point-min) (point-max)
-                              max-width max-height)))
+                              ;; Use 3*max-height as y-limit, to take more text
+                              ;; into account.
+                              max-width (* 3 max-height))))
               ;; Check that width is not exceeded. Otherwise use full height,
               ;; since lines will get wrapped.
               (when (<= (car size) max-width)
@@ -279,36 +283,37 @@ AREA1 and AREA2 are both in the form (X Y WIDTH HEIGHT DIR)."
 
 PS is the pixel size of the popup.  The calculated area is in the
 form (X Y WIDTH HEIGHT DIR)."
-  (pcase-let* ((cw (default-font-width))
-               (lh (default-line-height))
-               (border (alist-get 'child-frame-border-width corfu--frame-parameters))
-               (`(,_pfx ,_pfy ,pfw ,pfh)
-                (corfu-popupinfo--frame-geometry (frame-parent corfu--frame)))
-               (`(,cfx ,cfy ,cfw ,cfh) (corfu-popupinfo--frame-geometry corfu--frame))
-               ;; Candidates popup below input
-               (below (>= cfy (+ lh (cadr (window-inside-pixel-edges))
-                                 (window-tab-line-height)
-                                 (or (cdr (posn-x-y (posn-at-point (point)))) 0))))
-               ;; Popups aligned at top
-               (top-aligned (or below (< (cdr ps) cfh)))
-               ;; Left display area
-               (ahy (if top-aligned
-                        cfy
-                      (max 0 (- (+ cfy cfh) border border (cdr ps)))))
-               (ahh (if top-aligned
-                        (min (- pfh cfy) (cdr ps))
-                      (min (- (+ cfy cfh) border border) (cdr ps))))
-               (al (list (max 0 (- cfx (car ps) border)) ahy
-                         (min (- cfx border) (car ps)) ahh 'left))
-               ;; Right display area
-               (arx (+ cfx cfw (- border)))
-               (ar (list arx ahy (min (- pfw arx border border) (car ps)) ahh 'right))
-               ;; Vertical display area
-               (avw (min (car ps) (- pfw cfx border border)))
-               (av (if below
-                       (list cfx (+ cfy cfh (- border)) avw (min (- pfh cfy cfh border) (cdr ps)) 'vertical)
-                     (let ((h (min (- cfy border border) (cdr ps))))
-                       (list cfx (max 0 (- cfy h border)) avw h 'vertical)))))
+  (pcase-let*
+      ((cw (default-font-width))
+       (lh (default-line-height))
+       (border (alist-get 'child-frame-border-width corfu--frame-parameters))
+       (`(,_pfx ,_pfy ,pfw ,pfh)
+        (corfu-popupinfo--frame-geometry (frame-parent corfu--frame)))
+       (`(,cfx ,cfy ,cfw ,cfh) (corfu-popupinfo--frame-geometry corfu--frame))
+       ;; Candidates popup below input
+       (below (>= cfy (+ lh (cadr (window-inside-pixel-edges))
+                         (window-tab-line-height)
+                         (or (cdr (posn-x-y (posn-at-point (point)))) 0))))
+       ;; Popups aligned at top
+       (top-aligned (or below (< (cdr ps) cfh)))
+       ;; Left display area
+       (ahy (if top-aligned
+                cfy
+              (max 0 (- (+ cfy cfh) border border (cdr ps)))))
+       (ahh (if top-aligned
+                (min (- pfh cfy) (cdr ps))
+              (min (- (+ cfy cfh) border border) (cdr ps))))
+       (al (list (max 0 (- cfx (car ps) border)) ahy
+                 (min (- cfx border) (car ps)) ahh 'left))
+       ;; Right display area
+       (arx (+ cfx cfw (- border)))
+       (ar (list arx ahy (min (- pfw arx border border) (car ps)) ahh 'right))
+       ;; Vertical display area
+       (avw (min (car ps) (- pfw cfx border border)))
+       (av (if below
+               (list cfx (+ cfy cfh (- border)) avw (min (- pfh cfy cfh border) (cdr ps)) 'vertical)
+             (let ((h (min (- cfy border border) (cdr ps))))
+               (list cfx (max 0 (- cfy h border)) avw h 'vertical)))))
     (unless (and corfu-popupinfo--lock-dir
                  (corfu-popupinfo--fits-p
                   (cons (* cw corfu-popupinfo-min-width) (* lh corfu-popupinfo-min-height))
@@ -344,9 +349,6 @@ form (X Y WIDTH HEIGHT DIR)."
                 (erase-buffer)
                 (insert content)
                 (goto-char (point-min)))
-              ;; TODO Could we somehow refill the buffer intelligently?
-              ;; (setq fill-column corfu-popupinfo-max-width)
-              ;; (fill-region (point-min) (point-max))
               (dolist (var corfu-popupinfo--buffer-parameters)
                 (set (make-local-variable (car var)) (cdr var)))
               (setf face-remapping-alist (copy-tree face-remapping-alist)
@@ -463,6 +465,11 @@ not be displayed until this command is called again, even if
   (interactive)
   (corfu-popupinfo--toggle corfu-popupinfo--function))
 
+;;;###autoload
+(define-minor-mode corfu-popupinfo-mode
+  "Corfu info popup minor mode."
+  :global t :group 'corfu)
+
 (cl-defmethod corfu--exhibit :after (&context (corfu-popupinfo-mode (eql t)) &optional _auto)
   (when completion-in-region-mode
     (setf (alist-get #'corfu-popupinfo-mode minor-mode-overriding-map-alist)
@@ -499,11 +506,6 @@ not be displayed until this command is called again, even if
   (setq minor-mode-overriding-map-alist
         (assq-delete-all #'corfu-popupinfo-mode
                          minor-mode-overriding-map-alist)))
-
-;;;###autoload
-(define-minor-mode corfu-popupinfo-mode
-  "Corfu info popup minor mode."
-  :global t :group 'corfu)
 
 ;; Emacs 28: Do not show Corfu commands with M-X
 (dolist (sym '(corfu-popupinfo-scroll-down corfu-popupinfo-scroll-up

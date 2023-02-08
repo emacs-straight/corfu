@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
 ;; Version: 0.34
-;; Package-Requires: ((emacs "27.1") (compat "29.1.3.0"))
+;; Package-Requires: ((emacs "27.1") (compat "29.1.3.3"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -34,7 +34,6 @@
 ;;; Code:
 
 (require 'compat)
-(require 'seq)
 (eval-when-compile
   (require 'cl-lib)
   (require 'subr-x))
@@ -221,6 +220,8 @@ The completion backend can override this with
 
 (defvar-keymap corfu-map
   :doc "Corfu keymap used when popup is shown."
+  "<remap> <move-beginning-of-line>" #'corfu-prompt-beginning
+  "<remap> <move-end-of-line>" #'corfu-prompt-end
   "<remap> <beginning-of-buffer>" #'corfu-first
   "<remap> <end-of-buffer>" #'corfu-last
   "<remap> <scroll-down-command>" #'corfu-scroll-down
@@ -231,6 +232,9 @@ The completion backend can override this with
   "<remap> <keyboard-escape-quit>" #'corfu-reset
   "<down>" #'corfu-next
   "<up>" #'corfu-previous
+  ;; XXX C-a is bound because of eshell.
+  ;; Ideally eshell would remap move-beginning-of-line.
+  "C-a" #'corfu-prompt-beginning
   ;; XXX [tab] is bound because of org-mode
   ;; The binding should be removed from org-mode-map.
   "<tab>" #'corfu-complete
@@ -455,55 +459,6 @@ FRAME is the existing frame."
     (redirect-frame-focus frame parent)
     frame))
 
-(defun corfu--popup-show (pos off width lines &optional curr lo bar)
-  "Show LINES as popup at POS - OFF.
-WIDTH is the width of the popup.
-The current candidate CURR is highlighted.
-A scroll bar is displayed from LO to LO+BAR."
-  (let ((lh (default-line-height)))
-    (with-current-buffer (corfu--make-buffer " *corfu*")
-      (let* ((ch (default-line-height))
-             (cw (default-font-width))
-             (ml (ceiling (* cw corfu-left-margin-width)))
-             (mr (ceiling (* cw corfu-right-margin-width)))
-             (bw (ceiling (min mr (* cw corfu-bar-width))))
-             (marginl (and (> ml 0) (propertize " " 'display `(space :width (,ml)))))
-             (marginr (and (> mr 0) (propertize " " 'display `(space :align-to right))))
-             (sbar (when (> bw 0)
-                     (concat (propertize " " 'display `(space :align-to (- right (,mr))))
-                             (propertize " " 'display `(space :width (,(- mr bw))))
-                             (propertize " " 'face 'corfu-bar 'display `(space :width (,bw))))))
-             (pos (posn-x-y (posn-at-point pos)))
-             (width (+ (* width cw) ml mr))
-             ;; XXX HACK: Minimum popup height must be at least 1 line of the
-             ;; parent frame (#261).
-             (height (max lh (* (length lines) ch)))
-             (edge (window-inside-pixel-edges))
-             (border (alist-get 'child-frame-border-width corfu--frame-parameters))
-             (x (max 0 (min (+ (car edge) (- (or (car pos) 0) ml (* cw off) border))
-                            (- (frame-pixel-width) width))))
-             (yb (+ (cadr edge) (window-tab-line-height) (or (cdr pos) 0) lh))
-             (y (if (> (+ yb (* corfu-count ch) lh lh) (frame-pixel-height))
-                    (- yb height lh border border)
-                  yb))
-             (row 0))
-        (with-silent-modifications
-          (erase-buffer)
-          (insert (mapconcat (lambda (line)
-                               (let ((str (concat marginl line
-                                                  (if (and lo (<= lo row (+ lo bar)))
-                                                      sbar
-                                                    marginr))))
-                                 (when (eq row curr)
-                                   (add-face-text-property
-                                    0 (length str) 'corfu-current 'append str))
-                                 (cl-incf row)
-                                 str))
-                             lines "\n"))
-          (goto-char (point-min)))
-        (setq corfu--frame (corfu--make-frame corfu--frame x y
-                                              width height (current-buffer)))))))
-
 (defun corfu--hide-frame-deferred (frame)
   "Deferred hiding of child FRAME."
   (when (and (frame-live-p frame) (frame-visible-p frame))
@@ -519,14 +474,6 @@ A scroll bar is displayed from LO to LO+BAR."
              (not (frame-parameter frame 'corfu--hide-timer)))
     (set-frame-parameter frame 'corfu--hide-timer
                          (run-at-time 0 nil #'corfu--hide-frame-deferred frame))))
-
-(defun corfu--popup-hide ()
-  "Hide Corfu popup."
-  (corfu--hide-frame corfu--frame))
-
-(defun corfu--popup-support-p ()
-  "Return non-nil if child frames are supported."
-  (display-graphic-p))
 
 (defun corfu--move-to-front (elem list)
   "Move ELEM to front of LIST."
@@ -581,10 +528,7 @@ A scroll bar is displayed from LO to LO+BAR."
 
 (defmacro corfu--partition! (list form)
   "Evaluate FORM for every element and partition LIST."
-  (let ((head1 (make-symbol "head1"))
-        (head2 (make-symbol "head2"))
-        (tail1 (make-symbol "tail1"))
-        (tail2 (make-symbol "tail2")))
+  (cl-with-gensyms (head1 head2 tail1 tail2)
     `(let* ((,head1 (cons nil nil))
             (,head2 (cons nil nil))
             (,tail1 ,head1)
@@ -673,8 +617,7 @@ A scroll bar is displayed from LO to LO+BAR."
       ;; without the user explicitly requesting it via M-TAB.
       (pcase (let ((non-essential t))
                ;; XXX Guard against errors during candidate generation.
-               ;; For example dabbrev throws error "No dynamic expansion ... found".
-               ;; TODO Report this as a bug? Are completion tables supposed to throw errors?
+               ;; bug#61274: `dabbrev-capf' signals errors.
                (condition-case err
                    (if interruptible
                        (while-no-input (corfu--recompute str pt table pred))
@@ -971,6 +914,63 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
 Auto completion is only performed if the tick did not change."
   (list (selected-window) (current-buffer) (buffer-chars-modified-tick) (point)))
 
+(cl-defgeneric corfu--popup-show (pos off width lines &optional curr lo bar)
+  "Show LINES as popup at POS - OFF.
+WIDTH is the width of the popup.
+The current candidate CURR is highlighted.
+A scroll bar is displayed from LO to LO+BAR."
+  (let ((lh (default-line-height)))
+    (with-current-buffer (corfu--make-buffer " *corfu*")
+      (let* ((ch (default-line-height))
+             (cw (default-font-width))
+             (ml (ceiling (* cw corfu-left-margin-width)))
+             (mr (ceiling (* cw corfu-right-margin-width)))
+             (bw (ceiling (min mr (* cw corfu-bar-width))))
+             (marginl (and (> ml 0) (propertize " " 'display `(space :width (,ml)))))
+             (marginr (and (> mr 0) (propertize " " 'display `(space :align-to right))))
+             (sbar (when (> bw 0)
+                     (concat (propertize " " 'display `(space :align-to (- right (,mr))))
+                             (propertize " " 'display `(space :width (,(- mr bw))))
+                             (propertize " " 'face 'corfu-bar 'display `(space :width (,bw))))))
+             (pos (posn-x-y (posn-at-point pos)))
+             (width (+ (* width cw) ml mr))
+             ;; XXX HACK: Minimum popup height must be at least 1 line of the
+             ;; parent frame (#261).
+             (height (max lh (* (length lines) ch)))
+             (edge (window-inside-pixel-edges))
+             (border (alist-get 'child-frame-border-width corfu--frame-parameters))
+             (x (max 0 (min (+ (car edge) (- (or (car pos) 0) ml (* cw off) border))
+                            (- (frame-pixel-width) width))))
+             (yb (+ (cadr edge) (window-tab-line-height) (or (cdr pos) 0) lh))
+             (y (if (> (+ yb (* corfu-count ch) lh lh) (frame-pixel-height))
+                    (- yb height lh border border)
+                  yb))
+             (row 0))
+        (with-silent-modifications
+          (erase-buffer)
+          (insert (mapconcat (lambda (line)
+                               (let ((str (concat marginl line
+                                                  (if (and lo (<= lo row (+ lo bar)))
+                                                      sbar
+                                                    marginr))))
+                                 (when (eq row curr)
+                                   (add-face-text-property
+                                    0 (length str) 'corfu-current 'append str))
+                                 (cl-incf row)
+                                 str))
+                             lines "\n"))
+          (goto-char (point-min)))
+        (setq corfu--frame (corfu--make-frame corfu--frame x y
+                                              width height (current-buffer)))))))
+
+(cl-defgeneric corfu--popup-hide ()
+  "Hide Corfu popup."
+  (corfu--hide-frame corfu--frame))
+
+(cl-defgeneric corfu--popup-support-p ()
+  "Return non-nil if child frames are supported."
+  (display-graphic-p))
+
 (cl-defgeneric corfu--insert (status)
   "Insert current candidate, exit with STATUS if non-nil."
   (pcase-let* ((`(,beg ,end . ,_) completion-in-region--data)
@@ -1128,7 +1128,8 @@ See `corfu-separator' for more details."
   (corfu-scroll-down (- (or n 1))))
 
 (defun corfu-first ()
-  "Go to first candidate, or to the prompt when the first candidate is selected."
+  "Go to first candidate.
+If the first candidate is already selected, go to the prompt."
   (interactive)
   (corfu--goto (if (> corfu--index 0) 0 -1)))
 
@@ -1136,6 +1137,32 @@ See `corfu-separator' for more details."
   "Go to last candidate."
   (interactive)
   (corfu--goto (1- corfu--total)))
+
+(defun corfu-prompt-beginning (arg)
+  "Move to beginning of the prompt line.
+If the point is already the beginning of the prompt move to the
+beginning of the line.  If ARG is not 1 or nil, move backward ARG - 1
+lines first."
+  (interactive "^p")
+  (let ((beg (car completion-in-region--data)))
+    (if (or (not (eq arg 1))
+            (and (= corfu--preselect corfu--index) (= (point) beg)))
+        (move-beginning-of-line arg)
+      (corfu--goto -1)
+      (goto-char beg))))
+
+(defun corfu-prompt-end (arg)
+  "Move to end of the prompt line.
+If the point is already the end of the prompt move to the end of
+the line.  If ARG is not 1 or nil, move forward ARG - 1 lines
+first."
+  (interactive "^p")
+  (let ((end (cadr completion-in-region--data)))
+    (if (or (not (eq arg 1))
+            (and (= corfu--preselect corfu--index) (= (point) end)))
+        (move-end-of-line arg)
+      (corfu--goto -1)
+      (goto-char end))))
 
 (defun corfu-complete ()
   "Try to complete current input.
@@ -1200,7 +1227,7 @@ Quit if no candidate is selected."
     ;; issue has been mentioned. We never uninstall this advice since the
     ;; advice is active *globally*.
     (advice-add #'completion--capf-wrapper :around #'corfu--capf-wrapper-advice)
-    (advice-add #'eldoc-display-message-no-interference-p :before-while #'corfu--allow-eldoc)
+    (advice-add #'eldoc-display-message-no-interference-p :before-while #'corfu--eldoc-advice)
     (and corfu-auto (add-hook 'post-command-hook #'corfu--auto-post-command nil 'local))
     (setq-local completion-in-region-function #'corfu--in-region))
    (t
@@ -1249,7 +1276,7 @@ The ORIG function takes the FUN and WHICH arguments."
               (memq major-mode corfu-excluded-modes))
     (corfu-mode 1)))
 
-(defun corfu--allow-eldoc ()
+(defun corfu--eldoc-advice ()
   "Return non-nil if Corfu is currently not active."
   (not (and corfu-mode completion-in-region-mode)))
 
