@@ -4,6 +4,10 @@
 
 * Development
 
+- Drop obsolete =corfu-preselect-first=.
+
+* Version 0.35 (2023-02-17)
+
 - =corfu-popupinfo=: Take more text into account when computing popup width.
 - =corfu-popupinfo=: Change keybindings, remap =corfu-info-documentation/location=.
 - =corfu-popupinfo=: Add commands =corfu-popupinfo-beginning/end=.

@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 0.34
+;; Version: 0.35
 ;; Package-Requires: ((emacs "27.1") (compat "29.1.3.4"))
 ;; Homepage: https://github.com/minad/corfu
 
@@ -93,9 +93,6 @@ inserted on further input."
 - valid: Only select the prompt if valid and not equal to the first candidate.
 - directory: Like first, but select the prompt if it is a directory."
   :type '(choice (const prompt) (const valid) (const first) (const directory)))
-
-(defvar corfu-preselect-first t)
-(make-obsolete-variable 'corfu-preselect-first "Use `corfu-preselect' instead." "0.34")
 
 (defcustom corfu-separator ?\s
   "Component separator character.
