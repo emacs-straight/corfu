@@ -406,8 +406,8 @@ FRAME is the existing frame."
          (parent (window-frame)))
     (unless (and (frame-live-p frame)
                  (eq (frame-parent frame) parent)
-                 ;; XXX HACK: It seems the frame can be alive but have a dead window?
-                 ;; Is this a Emacs 29 regression?
+                 ;; If there is more than one window, `frame-root-window' may
+                 ;; return nil.  Recreate the frame in this case.
                  (window-live-p (frame-root-window frame)))
       (when frame (delete-frame frame))
       (setq frame (make-frame
@@ -418,15 +418,6 @@ FRAME is the existing frame."
                      (internal-border-width
                       . ,(alist-get 'child-frame-border-width corfu--frame-parameters))
                      ,@corfu--frame-parameters))))
-    ;; Reset frame parameters if they changed.  For example `tool-bar-mode'
-    ;; overrides the parameter `tool-bar-lines' for every frame, including child
-    ;; frames.  The child frame API is a pleasure to work with.  It is full of
-    ;; lovely suprises.
-    (when-let ((params (frame-parameters frame))
-               (reset (seq-remove
-                       (lambda (p) (equal (alist-get (car p) params) (cdr p)))
-                       corfu--frame-parameters)))
-      (modify-frame-parameters frame reset))
     ;; XXX HACK Setting the same frame-parameter/face-background is not a nop.
     ;; Check before applying the setting. Without the check, the frame flickers
     ;; on Mac. We have to apply the face background before adjusting the frame
@@ -435,9 +426,17 @@ FRAME is the existing frame."
            (new (face-attribute 'corfu-border :background nil 'default)))
       (unless (equal (face-attribute face :background frame 'default) new)
         (set-face-background face new frame)))
-    (let ((new (face-attribute 'corfu-default :background nil 'default)))
-      (unless (equal (frame-parameter frame 'background-color) new)
-        (set-frame-parameter frame 'background-color new)))
+    ;; Reset frame parameters if they changed.  For example `tool-bar-mode'
+    ;; overrides the parameter `tool-bar-lines' for every frame, including child
+    ;; frames.  The child frame API is a pleasure to work with.  It is full of
+    ;; lovely surprises.
+    (when-let ((params (frame-parameters frame))
+               (reset (seq-remove
+                       (lambda (p) (equal (alist-get (car p) params) (cdr p)))
+                       `((background-color
+                          . ,(face-attribute 'corfu-default :background nil 'default))
+                         ,@corfu--frame-parameters))))
+      (modify-frame-parameters frame reset))
     (let ((win (frame-root-window frame)))
       (set-window-buffer win buffer)
       ;; Disallow selection of root window (#63)
@@ -461,14 +460,12 @@ FRAME is the existing frame."
             ;; XXX HACK: Force redisplay, otherwise the popup sometimes does not
             ;; display content.
             (set-frame-position frame x y)
-            (redisplay 'force)
-            (make-frame-visible frame)))
+            (redisplay 'force)))
       (set-frame-size frame width height t)
       (unless (equal (frame-position frame) (cons x y))
-        (set-frame-position frame x y))
-      (unless (frame-visible-p frame)
-        (make-frame-visible frame)))
-    frame))
+        (set-frame-position frame x y))))
+  (make-frame-visible frame)
+  frame)
 
 (defun corfu--hide-frame-deferred (frame)
   "Deferred hiding of child FRAME."
