@@ -1,28 +1,32 @@
-#+title: corfu.el - Completion Overlay Region FUnction
+#+title: corfu.el - COmpletion in Region FUnction
 #+author: Daniel Mendler
 #+language: en
 #+export_file_name: corfu.texi
 #+texinfo_dir_category: Emacs misc features
 #+texinfo_dir_title: Corfu: (corfu).
-#+texinfo_dir_desc: Completion Overlay Region FUnction
+#+texinfo_dir_desc: COmpletion in Region FUnction
 
 #+html: <a href="https://www.gnu.org/software/emacs/"><img alt="GNU Emacs" src="https://github.com/minad/corfu/blob/screenshots/emacs.svg?raw=true"/></a>
 #+html: <a href="https://elpa.gnu.org/packages/corfu.html"><img alt="GNU ELPA" src="https://elpa.gnu.org/packages/corfu.svg"/></a>
 #+html: <a href="https://elpa.gnu.org/devel/corfu.html"><img alt="GNU-devel ELPA" src="https://elpa.gnu.org/devel/corfu.svg"/></a>
 
-Corfu enhances completion at point with a small completion popup. The current
-candidates are shown in a popup below or above the point. Corfu is the
-minimalistic ~completion-in-region~ counterpart of the [[https://github.com/minad/vertico][Vertico]] minibuffer UI.
+Corfu enhances in-buffer completion with a small completion popup. The current
+candidates are shown in a popup below or above the point. The candidates can be
+selected by moving up and down. Corfu is the minimalistic in-buffer completion
+counterpart of the [[https://github.com/minad/vertico][Vertico]] minibuffer UI.
 
 Corfu is a small package, which relies on the Emacs completion facilities and
-concentrates on providing a polished completion UI. Completions are either
-provided by commands like ~dabbrev-completion~ or by pluggable backends
-(~completion-at-point-functions~, Capfs). Most programming language major modes
-implement a Capf. The Emacs language server clients use Capfs, which retrieve
-completions from the server via the language server protocol (LSP). Corfu does
-not include its own completion backends. The Emacs built-in Capfs and the Capfs
-provided by other programming language packages are usually sufficient. A few
-additional Capfs and completion utilities are provided by the [[https://github.com/minad/cape][Cape]] package.
+concentrates on providing a polished completion UI. In-buffer completion UIs in
+Emacs can hook into ~completion-in-region~, which implements the interaction with
+the user. Completions at point are either provided by commands like
+~dabbrev-completion~ or by pluggable backends (~completion-at-point-functions~,
+Capfs) and are then passed to ~completion-in-region~. Most programming, text and
+shell major modes implement a Capf. The Emacs language server clients use Capfs,
+which retrieve completions from the server via the language server protocol
+(LSP). Corfu does not include its own completion backends. The Emacs built-in
+Capfs and the Capfs provided by other programming language packages are usually
+sufficient. A few additional Capfs and completion utilities are provided by the
+[[https://github.com/minad/cape][Cape]] package.
 
 *NOTE*: Corfu uses child frames to show the popup and falls back to the default
 setting of the ~completion-in-region-function~ on non-graphical displays. If you
@@ -71,7 +75,7 @@ such that you can adapt it precisely to your requirements. However in order to
 quickly try out the Corfu completion package, it should be sufficient to
 activate ~global-corfu-mode~. You can experiment with manual completion for
 example in an Elisp buffer or in an Eshell or Shell buffer. For auto completion,
-set ~corfu-auto=t~ before turning on ~global-corfu-mode~.
+set ~corfu-auto~ to t before turning on ~global-corfu-mode~.
 
 Here is an example configuration:
 
@@ -166,9 +170,9 @@ in the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Completion.ht
 
 ** Auto completion
 
-Auto completion is disabled by default, but can be enabled by setting
-~corfu-auto=t~. Furthermore you may want to configure Corfu to quit completion
-eagerly, such that the completion popup stays out of your way when it appeared
+Auto completion is disabled by default, but can be enabled by setting ~corfu-auto~
+to t. Furthermore you may want to configure Corfu to quit completion eagerly,
+such that the completion popup stays out of your way when it appeared
 unexpectedly.
 
 #+begin_src emacs-lisp
@@ -333,14 +337,14 @@ space, by default) to the primary character of your orderless component
 separator.
 
 Then, when a new orderless component is desired, use =M-SPC=
-(~corfu-insert-separator~) to enter the /first/ component separator in the input,
+(~corfu-insert-separator~) to enter the first component separator in the input,
 and arbitrary orderless search terms and new separators can be entered
 thereafter.
 
 To treat the entire input as Orderless input, you can set the customization
-option ~corfu-quit-at-boundary=t~. This disables the predicate which checks if the
-current completion boundary has been left. In contrast, if you /always/ want to
-quit at the boundary, simply set ~corfu-quit-at-boundary=nil~. By default
+option ~corfu-quit-at-boundary~ to t. This disables the predicate which checks if
+the current completion boundary has been left. In contrast, if you always want
+to quit at the boundary, set ~corfu-quit-at-boundary~ to ~nil~. By default
 ~corfu-quit-at-boundary~ is set to ~separator~ which quits at completion boundaries
 as long as no separator has been inserted with ~corfu-insert-separator~.
 
