@@ -41,16 +41,13 @@
 (eval-when-compile
   (require 'cl-lib))
 
-(defcustom corfu-history-length nil
-  "Corfu history length."
-  :type '(choice (const nil) natnum)
-  :group 'corfu)
+(defvar corfu-history nil
+  "History of Corfu candidates.
+The maximum length is determined by the variable `history-length'
+or the property `history-length' of `corfu-history'.")
 
 (defvar corfu-history--hash nil
   "Hash table of Corfu candidates.")
-
-(defvar corfu-history nil
-  "History of Corfu candidates.")
 
 (defun corfu-history--sort-predicate (x y)
   "Sorting predicate which compares X and Y."
@@ -88,8 +85,7 @@
   (when (>= corfu--index 0)
     (add-to-history 'corfu-history
                     (substring-no-properties
-                     (nth corfu--index corfu--candidates))
-                    corfu-history-length)
+                     (nth corfu--index corfu--candidates)))
     (setq corfu-history--hash nil)))
 
 (provide 'corfu-history)
