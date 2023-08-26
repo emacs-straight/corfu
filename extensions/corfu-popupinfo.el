@@ -60,9 +60,9 @@ preselected candidate.  Otherwise the popup can be requested
 manually via `corfu-popupinfo-toggle',
 `corfu-popupinfo-documentation' and `corfu-popupinfo-location'.
 
-It is *not recommended* to use a very small delay, since this
-will create high load for Emacs since retrieving the
-documentation is usually expensive."
+It is *not recommended* to use a short delay or even 0, since
+this will create high load for Emacs.  Retrieving the
+documentation from the backend is usually expensive."
   :type '(choice (const :tag "Never" nil)
                  (number :tag "Delay in seconds")
                  (cons :tag "Two Delays"
@@ -185,6 +185,7 @@ all values are in pixels relative to the origin.  See
                       (or (and (bufferp (car loc)) (car loc))
                           (get-file-buffer (car loc))
                           (let ((inhibit-message t)
+                                (message-log-max nil)
                                 (inhibit-redisplay t)
                                 (enable-dir-local-variables nil)
                                 (enable-local-variables :safe)
@@ -215,8 +216,8 @@ all values are in pixels relative to the origin.  See
   (when-let ((fun (plist-get corfu--extra :company-doc-buffer))
              (res (save-excursion
                     (let ((inhibit-message t)
-                          (inhibit-redisplay t)
                           (message-log-max nil)
+                          (inhibit-redisplay t)
                           ;; Reduce print length for elisp backend (#249)
                           (print-level 3)
                           (print-length (* corfu-popupinfo-max-width
@@ -355,10 +356,6 @@ form (X Y WIDTH HEIGHT DIR)."
                 (set (make-local-variable (car var)) (cdr var)))
               (when-let ((m (memq 'corfu-default (alist-get 'default face-remapping-alist))))
                 (setcar m 'corfu-popupinfo)))
-          (unless (eq corfu-popupinfo--toggle 'init)
-            (message "No %s available for `%s'"
-                     (car (last (split-string (symbol-name corfu-popupinfo--function) "-+")))
-                     candidate))
           (corfu-popupinfo--hide)
           (setq cand-changed nil coords-changed nil)))
       (when (or cand-changed coords-changed)
@@ -444,7 +441,12 @@ See `corfu-popupinfo-scroll-up' for more details."
       (corfu-popupinfo--hide)
     (setq corfu-popupinfo--function fun
           corfu-popupinfo--candidate nil)
-    (corfu-popupinfo--show (nth corfu--index corfu--candidates))))
+    (let ((cand (nth corfu--index corfu--candidates)))
+      (corfu-popupinfo--show cand)
+      (unless (corfu-popupinfo--visible-p)
+        (user-error "No %s available for `%s'"
+                    (car (last (split-string (symbol-name fun) "-+")))
+                    cand)))))
 
 (defun corfu-popupinfo-documentation ()
   "Show or hide documentation in popup.
@@ -480,16 +482,16 @@ not be displayed until this command is called again, even if
       (cancel-timer corfu-popupinfo--timer)
       (setq corfu-popupinfo--timer nil))
     (if (and (>= corfu--index 0) (corfu-popupinfo--visible-p corfu--frame))
-        (let ((candidate (nth corfu--index corfu--candidates)))
+        (let ((cand (nth corfu--index corfu--candidates)))
           (if-let ((delay (if (consp corfu-popupinfo-delay)
                               (funcall (if (eq corfu-popupinfo--toggle 'init) #'car #'cdr)
                                        corfu-popupinfo-delay)
                             corfu-popupinfo-delay))
                    (corfu-popupinfo--toggle))
               (if (or (<= delay 0)
-                      (and (equal candidate corfu-popupinfo--candidate)
+                      (and (equal cand corfu-popupinfo--candidate)
                            (corfu-popupinfo--visible-p)))
-                  (corfu-popupinfo--show candidate)
+                  (corfu-popupinfo--show cand)
                 (when (corfu-popupinfo--visible-p)
                   (cond
                    (corfu-popupinfo-hide
@@ -497,8 +499,8 @@ not be displayed until this command is called again, even if
                    (corfu-popupinfo--candidate
                     (corfu-popupinfo--show corfu-popupinfo--candidate))))
                 (setq corfu-popupinfo--timer
-                    (run-at-time delay nil #'corfu-popupinfo--show candidate)))
-            (unless (equal candidate corfu-popupinfo--candidate)
+                    (run-at-time delay nil #'corfu-popupinfo--show cand)))
+            (unless (equal cand corfu-popupinfo--candidate)
               (corfu-popupinfo--hide))))
       (corfu-popupinfo--hide))))
 
