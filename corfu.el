@@ -266,7 +266,7 @@ the completion backend is costly."
   "Length of the candidate list `corfu--candidates'.")
 
 (defvar-local corfu--highlight #'identity
-  "Deferred candidate highlighting function.")
+  "Lazy candidate highlighting function.")
 
 (defvar-local corfu--index -1
   "Index of current candidate or negative for prompt selection.")
@@ -520,46 +520,38 @@ FRAME is the existing frame."
       (nconc (list (car found)) (delq (setcar found nil) list))
     list))
 
-;; bug#47711: Deferred highlighting for `completion-all-completions'
-;; XXX There is one complication: `completion--twq-all' already adds
-;; `completions-common-part'.
-(defun corfu--all-completions (&rest args)
-  "Compute all completions for ARGS with deferred highlighting."
-  (cl-letf* ((orig-pcm (symbol-function #'completion-pcm--hilit-commonality))
-             (orig-flex (symbol-function #'completion-flex-all-completions))
-             ((symbol-function #'completion-flex-all-completions)
-              (lambda (&rest args)
-                ;; Unfortunately for flex we have to undo the deferred
-                ;; highlighting, since flex uses the completion-score for
-                ;; sorting, which is applied during highlighting.
-                (cl-letf (((symbol-function #'completion-pcm--hilit-commonality) orig-pcm))
-                  (apply orig-flex args))))
-             ;; Defer the following highlighting functions
-             (hl #'identity)
+(defun corfu--filter-completions (&rest args)
+  "Compute all completions for ARGS with lazy highlighting."
+  (defvar completion-lazy-hilit)
+  (defvar completion-lazy-hilit-fn)
+  (cl-letf* ((completion-lazy-hilit t)
+             (completion-lazy-hilit-fn nil)
              ((symbol-function #'completion-hilit-commonality)
               (lambda (cands prefix &optional base)
-                (setq hl (lambda (x) (nconc (completion-hilit-commonality x prefix base) nil)))
-                (and cands (nconc cands base))))
-             ((symbol-function #'completion-pcm--hilit-commonality)
-              (lambda (pattern cands)
-                (setq hl (lambda (x)
-                           ;; `completion-pcm--hilit-commonality' sometimes
-                           ;; throws an internal error for example when entering
-                           ;; "/sudo:://u".
-                           (condition-case nil
-                               (completion-pcm--hilit-commonality pattern x)
-                             (t x))))
-                cands)))
-    ;; Only advise orderless after it has been loaded to avoid load order issues
-    (if (and (fboundp 'orderless-highlight-matches)
-             (fboundp 'orderless-pattern-compiler))
-        (cl-letf (((symbol-function 'orderless-highlight-matches)
-                   (lambda (pattern cands)
-                     (let ((regexps (orderless-pattern-compiler pattern)))
-                       (setq hl (lambda (x) (orderless-highlight-matches regexps x))))
-                     cands)))
-          (cons (apply #'completion-all-completions args) hl))
-      (cons (apply #'completion-all-completions args) hl))))
+                (setq completion-lazy-hilit-fn
+                      (lambda (x) (car (completion-hilit-commonality (list x) prefix base))))
+                (and cands (nconc cands base)))))
+    (if (eval-when-compile (>= emacs-major-version 30))
+        (cons (apply #'completion-all-completions args) completion-lazy-hilit-fn)
+      (cl-letf* ((orig-pcm (symbol-function #'completion-pcm--hilit-commonality))
+                 (orig-flex (symbol-function #'completion-flex-all-completions))
+                 ((symbol-function #'completion-flex-all-completions)
+                  (lambda (&rest args)
+                    ;; Unfortunately for flex we have to undo the lazy highlighting, since flex uses
+                    ;; the completion-score for sorting, which is applied during highlighting.
+                    (cl-letf (((symbol-function #'completion-pcm--hilit-commonality) orig-pcm))
+                      (apply orig-flex args))))
+                 ((symbol-function #'completion-pcm--hilit-commonality)
+                  (lambda (pattern cands)
+                    (setq completion-lazy-hilit-fn
+                          (lambda (x)
+                            ;; `completion-pcm--hilit-commonality' sometimes throws an internal error
+                            ;; for example when entering "/sudo:://u".
+                            (condition-case nil
+                                (car (completion-pcm--hilit-commonality pattern (list x)))
+                              (t x))))
+                    cands)))
+        (cons (apply #'completion-all-completions args) completion-lazy-hilit-fn)))))
 
 (defsubst corfu--length-string< (x y)
   "Sorting predicate which compares X and Y first by length then by `string<'."
@@ -614,7 +606,7 @@ FRAME is the existing frame."
                              (t (cons 0 (length after))))))
                (field (substring str (car bounds) (+ pt (cdr bounds))))
                (completing-file (eq (corfu--metadata-get 'category) 'file))
-               (`(,all . ,hl) (corfu--all-completions str table pred pt corfu--metadata))
+               (`(,all . ,hl) (corfu--filter-completions str table pred pt corfu--metadata))
                (base (or (when-let (z (last all)) (prog1 (cdr z) (setcdr z nil))) 0))
                (corfu--base (substring str 0 base)))
     ;; Filter the ignored file extensions. We cannot use modified predicate for
@@ -630,7 +622,7 @@ FRAME is the existing frame."
       (corfu--metadata . ,corfu--metadata)
       (corfu--candidates . ,all)
       (corfu--total . ,(length all))
-      (corfu--highlight . ,hl)
+      (corfu--highlight . ,(or hl #'identity))
       (corfu--preselect . ,(if (or (eq corfu-preselect 'prompt) (not all)
                                    (and completing-file (eq corfu-preselect 'directory)
                                         (= (length corfu--base) (length str))
@@ -733,8 +725,10 @@ FRAME is the existing frame."
   (pcase-let* ((last (min (+ corfu--scroll corfu-count) corfu--total))
                (bar (ceiling (* corfu-count corfu-count) corfu--total))
                (lo (min (- corfu-count bar 1) (floor (* corfu-count corfu--scroll) corfu--total)))
-               (`(,mf . ,acands) (corfu--affixate (funcall corfu--highlight
-                                   (seq-subseq corfu--candidates corfu--scroll last))))
+               (`(,mf . ,acands) (corfu--affixate
+                                  (cl-loop for i from 0 below corfu-count
+                                           for c in (nthcdr corfu--scroll corfu--candidates)
+                                           collect (funcall corfu--highlight (substring c)))))
                (`(,pw ,width ,fcands) (corfu--format-candidates acands))
                ;; Disable the left margin if a margin formatter is active.
                (corfu-left-margin-width (if mf 0 corfu-left-margin-width)))
