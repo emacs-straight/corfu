@@ -265,7 +265,7 @@ the completion backend is costly."
 (defvar-local corfu--total 0
   "Length of the candidate list `corfu--candidates'.")
 
-(defvar-local corfu--highlight #'identity
+(defvar-local corfu--hilit #'identity
   "Lazy candidate highlighting function.")
 
 (defvar-local corfu--index -1
@@ -295,7 +295,7 @@ the completion backend is costly."
 (defconst corfu--state-vars
   '(corfu--base
     corfu--candidates
-    corfu--highlight
+    corfu--hilit
     corfu--index
     corfu--preselect
     corfu--scroll
@@ -601,9 +601,9 @@ FRAME is the existing frame."
                ;; bug#47678: `completion-boundaries' fails for `partial-completion'
                ;; if the cursor is moved between the slashes of "~//".
                ;; See also vertico.el which has the same issue.
-               (bounds (or (condition-case nil
-                               (completion-boundaries before table pred after)
-                             (t (cons 0 (length after))))))
+               (bounds (condition-case nil
+                           (completion-boundaries before table pred after)
+                         (t (cons 0 (length after)))))
                (field (substring str (car bounds) (+ pt (cdr bounds))))
                (completing-file (eq (corfu--metadata-get 'category) 'file))
                (`(,all . ,hl) (corfu--filter-completions str table pred pt corfu--metadata))
@@ -622,7 +622,7 @@ FRAME is the existing frame."
       (corfu--metadata . ,corfu--metadata)
       (corfu--candidates . ,all)
       (corfu--total . ,(length all))
-      (corfu--highlight . ,(or hl #'identity))
+      (corfu--hilit . ,(or hl #'identity))
       (corfu--preselect . ,(if (or (eq corfu-preselect 'prompt) (not all)
                                    (and completing-file (eq corfu-preselect 'directory)
                                         (= (length corfu--base) (length str))
@@ -726,9 +726,9 @@ FRAME is the existing frame."
                (bar (ceiling (* corfu-count corfu-count) corfu--total))
                (lo (min (- corfu-count bar 1) (floor (* corfu-count corfu--scroll) corfu--total)))
                (`(,mf . ,acands) (corfu--affixate
-                                  (cl-loop for i from 0 below corfu-count
+                                  (cl-loop repeat corfu-count
                                            for c in (nthcdr corfu--scroll corfu--candidates)
-                                           collect (funcall corfu--highlight (substring c)))))
+                                           collect (funcall corfu--hilit (substring c)))))
                (`(,pw ,width ,fcands) (corfu--format-candidates acands))
                ;; Disable the left margin if a margin formatter is active.
                (corfu-left-margin-width (if mf 0 corfu-left-margin-width)))
