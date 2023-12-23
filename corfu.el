@@ -72,14 +72,19 @@ The value should lie between 0 and corfu-count/2."
   :type 'boolean)
 
 (defcustom corfu-on-exact-match 'insert
-  "Configure how a single exact match should be handled."
-  :type '(choice (const insert) (const quit) (const nil)))
+  "Configure how a single exact match should be handled.
+- nil: No special handling, continue completion.
+- insert: Insert candidate, quit and call the `:exit-function'.
+- quit: Quit completion without further action.
+- show: Initiate completion even for a single match only."
+  :type '(choice (const insert) (const show) (const quit) (const nil)))
 
 (defcustom corfu-continue-commands
   ;; nil is undefined command
   '(nil ignore universal-argument universal-argument-more digit-argument
     "\\`corfu-" "\\`scroll-other-window")
-  "Continue Corfu completion after executing these commands."
+  "Continue Corfu completion after executing these commands.
+The list can container either command symbols or regular expressions."
   :type '(repeat (choice regexp symbol)))
 
 (defcustom corfu-preview-current 'insert
@@ -144,14 +149,18 @@ return a string, possibly an icon."
   :type 'hook)
 
 (defcustom corfu-sort-function #'corfu-sort-length-alpha
-  "Default sorting function, used if no `display-sort-function' is specified."
+  "Default sorting function.
+This function is used if the completion table does not specify a
+`display-sort-function'."
   :type `(choice
           (const :tag "No sorting" nil)
           (const :tag "By length and alpha" ,#'corfu-sort-length-alpha)
           (function :tag "Custom function")))
 
 (defcustom corfu-sort-override-function nil
-  "Override sort function which overrides the `display-sort-function'."
+  "Override sort function which overrides the `display-sort-function'.
+This function is used even if a completion table specifies its
+own sort function."
   :type '(choice (const nil) function))
 
 (defcustom corfu-auto-prefix 3
@@ -172,11 +181,14 @@ the completion backend is costly."
 (defcustom corfu-auto-commands
   '("self-insert-command\\'"
     c-electric-colon c-electric-lt-gt c-electric-slash c-scope-operator)
-  "Commands which initiate auto completion."
+  "Commands which initiate auto completion.
+The list can container either command symbols or regular expressions."
   :type '(repeat (choice regexp symbol)))
 
 (defcustom corfu-auto nil
-  "Enable auto completion."
+  "Enable auto completion.
+See also the settings `corfu-auto-delay', `corfu-auto-prefix' and
+`corfu-auto-commands'."
   :type 'boolean)
 
 (defgroup corfu-faces nil
@@ -844,9 +856,13 @@ Lookup STR in CANDS to restore text properties."
     (corfu-quit)
     (corfu--exit-function str status cands)))
 
-(defun corfu--setup ()
-  "Setup Corfu completion state."
-  (setq corfu--extra completion-extra-properties)
+(defun corfu--setup (beg end table pred)
+  "Setup Corfu completion state.
+See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
+  (setq beg (if (markerp beg) beg (copy-marker beg))
+        end (if (and (markerp end) (marker-insertion-type end)) end (copy-marker end t))
+        completion-in-region--data (list beg end table pred)
+        corfu--extra completion-extra-properties)
   (completion-in-region-mode 1)
   (activate-change-group (setq corfu--change-group (prepare-change-group)))
   (setcdr (assq #'completion-in-region-mode minor-mode-overriding-map-alist) corfu-map)
@@ -891,14 +907,15 @@ Lookup STR in CANDS to restore text properties."
       ('nil (corfu--message "No match") nil)
       ('t (goto-char end)
           (corfu--message "Sole match")
-          (corfu--exit-function
-           str 'finished
-           (alist-get 'corfu--candidates (corfu--recompute str pt table pred)))
+          (if (eq corfu-on-exact-match 'show)
+              (corfu--setup beg end table pred)
+            (corfu--exit-function
+             str 'finished
+             (alist-get 'corfu--candidates (corfu--recompute str pt table pred))))
           t)
       (`(,newstr . ,newpt)
-       (unless (markerp beg) (setq beg (copy-marker beg)))
-       (setq end (copy-marker end t)
-             completion-in-region--data (list beg end table pred))
+       (setq beg (if (markerp beg) beg (copy-marker beg))
+             end (copy-marker end t))
        (corfu--replace beg end newstr)
        (goto-char (+ beg newpt))
        (let* ((state (corfu--recompute newstr newpt table pred))
@@ -906,22 +923,24 @@ Lookup STR in CANDS to restore text properties."
               (total (alist-get 'corfu--total state))
               (candidates (alist-get 'corfu--candidates state)))
          (if (= total 1)
-             ;; If completion is finished and cannot be further completed,
-             ;; return 'finished. Otherwise setup the Corfu popup.
-             (if (consp (completion-try-completion
-                         newstr table pred newpt
-                         (completion-metadata newstr table pred)))
-                 (corfu--setup)
+             ;; If completion is finished and cannot be further completed, and
+             ;; the value of `corfu-on-exact-match' is not 'show, return
+             ;; 'finished.  Otherwise setup the Corfu popup.
+             (if (or (eq corfu-on-exact-match 'show)
+                     (consp (completion-try-completion
+                             newstr table pred newpt
+                             (completion-metadata newstr table pred))))
+                 (corfu--setup beg end table pred)
                (corfu--exit-function newstr 'finished candidates))
            (if (or (= total 0) (not threshold)
                    (and (not (eq threshold t)) (< threshold total)))
-               (corfu--setup)
+               (corfu--setup beg end table pred)
              (corfu--cycle-candidates total candidates (+ (length base) beg) end)
              ;; Do not show Corfu when "trivially" cycling, i.e.,
              ;; when the completion is finished after the candidate.
              (unless (equal (completion-boundaries (car candidates) table pred "")
                             '(0 . 0))
-               (corfu--setup)))))
+               (corfu--setup beg end table pred)))))
        t))))
 
 (defun corfu--message (&rest msg)
@@ -957,12 +976,7 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
                 (when-let ((newbeg (car-safe (funcall fun))))
                   (= newbeg beg))))
              (completion-extra-properties plist))
-         (setq completion-in-region--data
-               (list (if (markerp beg) beg (copy-marker beg))
-                     (copy-marker end t)
-                     table
-                     (plist-get plist :predicate)))
-         (corfu--setup)
+         (corfu--setup beg end table (plist-get plist :predicate))
          (corfu--exhibit 'auto))))))
 
 (defun corfu--auto-post-command ()
@@ -1117,8 +1131,9 @@ AUTO is non-nil when initializing auto completion."
      ;; 1) Single exactly matching candidate and no further completion is possible.
      ((and (not (equal str ""))
            (equal (car corfu--candidates) str) (not (cdr corfu--candidates))
-           (not (consp (completion-try-completion str table pred pt corfu--metadata)))
-           (or auto corfu-on-exact-match))
+           (not (eq corfu-on-exact-match 'show))
+           (or auto corfu-on-exact-match)
+           (not (consp (completion-try-completion str table pred pt corfu--metadata))))
       ;; Quit directly when initializing auto completion.
       (if (or auto (eq corfu-on-exact-match 'quit))
           (corfu-quit)
