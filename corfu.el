@@ -262,7 +262,7 @@ See also the settings `corfu-auto-delay', `corfu-auto-prefix' and
   "M-h" 'corfu-info-documentation
   "M-SPC" #'corfu-insert-separator)
 
-(defvar corfu--auto-timer nil
+(defvar corfu--auto-timer (timer-create)
   "Auto completion timer.")
 
 (defvar-local corfu--candidates nil
@@ -325,7 +325,8 @@ See also the settings `corfu-auto-delay', `corfu-auto-prefix' and
     (min-width . t)
     (min-height . t)
     (border-width . 0)
-    (child-frame-border-width . 1)
+    (outer-border-width . 0)
+    (internal-border-width . 1)
     (left-fringe . 0)
     (right-fringe . 0)
     (vertical-scroll-bars . nil)
@@ -453,7 +454,8 @@ FRAME is the existing frame."
          (after-make-frame-functions)
          (parent (window-frame)))
     (unless (and (frame-live-p frame)
-                 (eq (frame-parent frame) parent)
+                 (eq (frame-parent frame)
+                     (and (not (bound-and-true-p exwm--connection)) parent))
                  ;; If there is more than one window, `frame-root-window' may
                  ;; return nil.  Recreate the frame in this case.
                  (window-live-p (frame-root-window frame)))
@@ -467,10 +469,9 @@ FRAME is the existing frame."
     ;; Check before applying the setting. Without the check, the frame flickers
     ;; on Mac. We have to apply the face background before adjusting the frame
     ;; parameter, otherwise the border is not updated.
-    (let* ((face (if (facep 'child-frame-border) 'child-frame-border 'internal-border))
-           (new (face-attribute 'corfu-border :background nil 'default)))
-      (unless (equal (face-attribute face :background frame 'default) new)
-        (set-face-background face new frame)))
+    (let ((new (face-attribute 'corfu-border :background nil 'default)))
+      (unless (equal (face-attribute 'internal-border :background frame 'default) new)
+        (set-face-background 'internal-border new frame)))
     ;; Reset frame parameters if they changed.  For example `tool-bar-mode'
     ;; overrides the parameter `tool-bar-lines' for every frame, including child
     ;; frames.  The child frame API is a pleasure to work with.  It is full of
@@ -480,9 +481,6 @@ FRAME is the existing frame."
                        (lambda (p) (equal (alist-get (car p) params) (cdr p)))
                        `((background-color
                           . ,(face-attribute 'corfu-default :background nil 'default))
-                         ;; Set `internal-border-width' for Emacs 27
-                         (internal-border-width
-                          . ,(alist-get 'child-frame-border-width corfu--frame-parameters))
                          (font . ,(frame-parameter parent 'font))
                          ,@corfu--frame-parameters))))
       (modify-frame-parameters frame reset))
@@ -498,7 +496,12 @@ FRAME is the existing frame."
     (set-frame-size frame width height t)
     (unless (equal (frame-position frame) (cons x y))
       (set-frame-position frame x y)))
-  (make-frame-visible frame))
+  (make-frame-visible frame)
+  ;; Unparent child frame if EXWM is used, otherwise EXWM buffers are drawn on
+  ;; top of the Corfu child frame.
+  (when (and (bound-and-true-p exwm--connection) (frame-parent frame))
+    (set-frame-parameter frame 'parent-frame nil))
+  frame)
 
 (defun corfu--hide-frame-deferred (frame)
   "Deferred hiding of child FRAME."
@@ -967,7 +970,6 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
 
 (defun corfu--auto-complete-deferred (&optional tick)
   "Initiate auto completion if TICK did not change."
-  (setq corfu--auto-timer nil)
   (when (and (not completion-in-region-mode)
              (or (not tick) (equal tick (corfu--auto-tick))))
     (pcase (while-no-input ;; Interruptible Capf query
@@ -983,21 +985,21 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
 
 (defun corfu--auto-post-command ()
   "Post command hook which initiates auto completion."
-  (when corfu--auto-timer
-    (cancel-timer corfu--auto-timer)
-    (setq corfu--auto-timer nil))
-  (when (and (not completion-in-region-mode)
-             (not defining-kbd-macro)
-             (not buffer-read-only)
-             (corfu--match-symbol-p corfu-auto-commands this-command)
-             (corfu--popup-support-p))
-    (if (<= corfu-auto-delay 0)
-        (corfu--auto-complete-deferred)
-      ;; Do not use idle timer since this leads to unpredictable pauses, in
-      ;; particular with `flyspell-mode'.
-      (setq corfu--auto-timer
-            (run-at-time corfu-auto-delay nil
-                         #'corfu--auto-complete-deferred (corfu--auto-tick))))))
+  (cancel-timer corfu--auto-timer)
+  (if (and (not completion-in-region-mode)
+           (not defining-kbd-macro)
+           (not buffer-read-only)
+           (corfu--match-symbol-p corfu-auto-commands this-command)
+           (corfu--popup-support-p))
+      (if (<= corfu-auto-delay 0)
+          (corfu--auto-complete-deferred)
+        ;; Do not use `timer-set-idle-time' since this leads to
+        ;; unpredictable pauses, in particular with `flyspell-mode'.
+        (timer-set-time corfu--auto-timer
+                        (timer-relative-time nil corfu-auto-delay))
+        (timer-set-function corfu--auto-timer #'corfu--auto-complete-deferred
+                            (list (corfu--auto-tick)))
+        (timer-activate corfu--auto-timer))))
 
 (defun corfu--auto-tick ()
   "Return the current tick/status of the buffer.
@@ -1028,7 +1030,7 @@ A scroll bar is displayed from LO to LO+BAR."
              ;; parent frame (gh:minad/corfu#261).
              (height (max lh (* (length lines) ch)))
              (edge (window-inside-pixel-edges))
-             (border (alist-get 'child-frame-border-width corfu--frame-parameters))
+             (border (alist-get 'internal-border-width corfu--frame-parameters))
              (x (max 0 (min (+ (car edge) (- (or (car pos) 0) ml (* cw off) border))
                             (- (frame-pixel-width) width))))
              (yb (+ (cadr edge) (window-tab-line-height) (or (cdr pos) 0) lh))
