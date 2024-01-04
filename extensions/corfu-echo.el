@@ -85,7 +85,8 @@ subsequent delay."
                       (funcall (if corfu-echo--message #'cdr #'car)
                                corfu-echo-delay)
                     corfu-echo-delay))
-           (fun (plist-get corfu--extra :company-docsig))
+           (extra (nth 4 completion-in-region--data))
+           (fun (plist-get extra :company-docsig))
            (cand (and (>= corfu--index 0)
                       (nth corfu--index corfu--candidates))))
       (if (<= delay 0)
@@ -97,7 +98,7 @@ subsequent delay."
                              (corfu-echo--show (funcall fun cand))))))
     (corfu-echo--cancel)))
 
-(cl-defmethod corfu--teardown :before (&context (corfu-echo-mode (eql t)))
+(cl-defmethod corfu--teardown :before (_buf &context (corfu-echo-mode (eql t)))
   (corfu-echo--cancel))
 
 (cl-defmethod corfu--prepare :before (&context (corfu-echo-mode (eql t)))
