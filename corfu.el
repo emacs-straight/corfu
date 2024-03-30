@@ -787,29 +787,15 @@ FRAME is the existing frame."
     (corfu--popup-show pos pw width fcands (- corfu--index corfu--scroll)
                        (and (> corfu--total corfu-count) lo) bar)))
 
-(defun corfu--preview-current (beg end)
-  "Show current candidate as overlay given BEG and END."
-  (when-let ((cand (and corfu-preview-current (>= corfu--index 0)
-                        (/= corfu--index corfu--preselect)
-                        (nth corfu--index corfu--candidates))))
-    (setq beg (+ beg (length corfu--base))
-          corfu--preview-ov (make-overlay beg end nil))
-    (overlay-put corfu--preview-ov 'priority 1000)
-    (overlay-put corfu--preview-ov 'window (selected-window))
-    (overlay-put corfu--preview-ov (if (= beg end) 'after-string 'display) cand)))
-
 (defun corfu--range-valid-p ()
   "Check the completion range, return non-nil if valid."
   (pcase-let ((buf (current-buffer))
               (pt (point))
               (`(,beg ,end . ,_) completion-in-region--data))
     (and beg end
-         (eq buf (marker-buffer beg))
-         (eq buf (window-buffer))
+         (eq buf (marker-buffer beg)) (eq buf (window-buffer))
          (<= beg pt end)
-         (save-excursion
-           (goto-char beg)
-           (<= (pos-bol) pt (pos-eol))))))
+         (save-excursion (goto-char beg) (<= (pos-bol) pt (pos-eol))))))
 
 (defun corfu--continue-p ()
   "Check if completion should continue after a command.
@@ -834,6 +820,20 @@ the last command must be listed in `corfu-continue-commands'."
                                ;; with separator, any further chars allowed
                                (seq-contains-p (car corfu--input) corfu-separator)))
                       (funcall completion-in-region-mode--predicate)))))))
+
+(defun corfu--preview-current-p ()
+  "Return t if the selected candidate is previewed."
+  (and corfu-preview-current (>= corfu--index 0) (/= corfu--index corfu--preselect)))
+
+(defun corfu--preview-current (beg end)
+  "Show current candidate as overlay given BEG and END."
+  (when (corfu--preview-current-p)
+    (setq beg (+ beg (length corfu--base))
+          corfu--preview-ov (make-overlay beg end nil))
+    (overlay-put corfu--preview-ov 'priority 1000)
+    (overlay-put corfu--preview-ov 'window (selected-window))
+    (overlay-put corfu--preview-ov (if (= beg end) 'after-string 'display)
+                 (nth corfu--index corfu--candidates))))
 
 (defun corfu--window-change (_)
   "Window and buffer change hook which quits Corfu."
@@ -1124,8 +1124,7 @@ A scroll bar is displayed from LO to LO+BAR."
   ;; currently selected candidate and bail out of completion. This way you can
   ;; continue typing after selecting a candidate. The candidate will be inserted
   ;; and your new input will be appended.
-  (and (eq corfu-preview-current 'insert)
-       (/= corfu--index corfu--preselect)
+  (and (corfu--preview-current-p) (eq corfu-preview-current 'insert)
        ;; See the comment about `overriding-local-map' in `corfu--post-command'.
        (not (or overriding-terminal-local-map
                 (corfu--match-symbol-p corfu-continue-commands this-command)))
@@ -1300,7 +1299,7 @@ If the currently selected candidate is previewed, invoke
 styles via `completion-try-completion'.  Return non-nil if the
 input has been expanded."
   (interactive)
-  (if (and (>= corfu--index 0) corfu-preview-current (/= corfu--index corfu--preselect))
+  (if (corfu--preview-current-p)
       (corfu-complete)
     (pcase-let* ((`(,beg ,end ,table ,pred . ,_) completion-in-region--data)
                  (pt (max 0 (- (point) beg)))
@@ -1311,7 +1310,7 @@ input has been expanded."
          (goto-char end)
          (corfu--done str 'finished corfu--candidates)
          t)
-        (`(,newstr . ,newpt)
+        ((and `(,newstr . ,newpt) (guard (not (and (= pt newpt) (equal newstr str)))))
          (corfu--replace beg end newstr)
          (goto-char (+ beg newpt))
          ;; Exit with status 'finished if input is a valid match
