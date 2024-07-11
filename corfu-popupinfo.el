@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 1.4
-;; Package-Requires: ((emacs "27.1") (compat "29.1.4.4") (corfu "1.4"))
+;; Package-Requires: ((emacs "27.1") (compat "30") (corfu "1.4"))
 ;; Homepage: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -345,7 +345,8 @@ form (X Y WIDTH HEIGHT DIR)."
   (when (and (corfu-popupinfo--visible-p corfu--frame))
     (let* ((cand-changed
             (not (and (corfu-popupinfo--visible-p)
-                      (equal candidate corfu-popupinfo--candidate))))
+                      (corfu--equal-including-properties
+                       candidate corfu-popupinfo--candidate))))
            (new-coords (frame-edges corfu--frame 'inner-edges))
            (coords-changed (not (equal new-coords corfu-popupinfo--coordinates))))
       (when cand-changed

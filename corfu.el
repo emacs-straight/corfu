@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
 ;; Version: 1.4
-;; Package-Requires: ((emacs "27.1") (compat "29.1.4.4"))
+;; Package-Requires: ((emacs "27.1") (compat "30"))
 ;; Homepage: https://github.com/minad/corfu
 ;; Keywords: abbrev, convenience, matching, completion, text
 
@@ -529,7 +529,7 @@ FRAME is the existing frame."
 (defun corfu--filter-completions (&rest args)
   "Compute all completions for ARGS with lazy highlighting."
   (dlet ((completion-lazy-hilit t) (completion-lazy-hilit-fn nil))
-    (if (eval-when-compile (>= emacs-major-version 30))
+    (static-if (>= emacs-major-version 30)
         (cons (apply #'completion-all-completions args) completion-lazy-hilit-fn)
       (cl-letf* ((orig-pcm (symbol-function #'completion-pcm--hilit-commonality))
                  (orig-flex (symbol-function #'completion-flex-all-completions))
@@ -590,6 +590,15 @@ FRAME is the existing frame."
           (eq t (compare-strings word 0 len it 0 len
                                  completion-ignore-case))))))
 
+;; bug#6581: `equal-including-properties' uses `eq' for properties until 29.1.
+;; Approximate by comparing `text-properties-at' position 0.
+(defalias 'corfu--equal-including-properties
+  (static-if (< emacs-major-version 29)
+      (lambda (x y)
+        (and (equal x y)
+             (equal (text-properties-at 0 x) (text-properties-at 0 y))))
+    #'equal-including-properties))
+
 (defun corfu--delete-dups (list)
   "Delete `equal-including-properties' consecutive duplicates from LIST."
   (let ((beg list))
@@ -602,13 +611,7 @@ FRAME is the existing frame."
         (while (not (eq beg end))
           (let ((dup beg))
             (while (not (eq (cdr dup) end))
-              ;; bug#6581: `equal-including-properties' uses `eq' to compare
-              ;; properties until 29.1.  Approximate by comparing
-              ;; `text-properties-at' position 0.
-              (if (if (eval-when-compile (< emacs-major-version 29))
-                      (equal (text-properties-at 0 (car beg))
-                             (text-properties-at 0 (cadr dup)))
-                    (equal-including-properties (car beg) (cadr dup)))
+              (if (corfu--equal-including-properties (car beg) (cadr dup))
                   (setcdr dup (cddr dup))
                 (pop dup))))
           (pop beg)))))
@@ -713,16 +716,18 @@ FRAME is the existing frame."
 
 (defun corfu--metadata-get (prop)
   "Return PROP from completion metadata."
-  ;; Note: Do not use `completion-metadata-get' in order to avoid Marginalia.
-  ;; The Marginalia annotators are too heavy for the Corfu popup!
-  (cdr (assq prop corfu--metadata)))
+  ;; Marginalia and various icon packages advise `completion-metadata-get' to
+  ;; inject their annotations, but are meant only for minibuffer completion.
+  ;; Therefore call `completion-metadata-get' without advices here.
+  (let ((completion-extra-properties (nth 4 completion-in-region--data)))
+    (funcall (advice--cd*r (symbol-function (compat-function completion-metadata-get)))
+             corfu--metadata prop)))
 
 (defun corfu--format-candidates (cands)
   "Format annotated CANDS."
-  (setq cands
-        (cl-loop for c in cands collect
-                 (cl-loop for s in c collect
-                          (replace-regexp-in-string "[ \t]*\n[ \t]*" " " s))))
+  (cl-loop for c in cands do
+           (cl-loop for s in-ref c do
+                    (setf s (replace-regexp-in-string "[ \t]*\n[ \t]*" " " s))))
   (let* ((cw (cl-loop for x in cands maximize (string-width (car x))))
          (pw (cl-loop for x in cands maximize (string-width (cadr x))))
          (sw (cl-loop for x in cands maximize (string-width (caddr x))))
@@ -1076,15 +1081,14 @@ A scroll bar is displayed from LO to LO+BAR."
 
 (cl-defgeneric corfu--affixate (cands)
   "Annotate CANDS with annotation function."
-  (let* ((completion-extra-properties (nth 4 completion-in-region--data))
-         (dep (plist-get completion-extra-properties :company-deprecated))
-         (mf (run-hook-with-args-until-success 'corfu-margin-formatters corfu--metadata)))
+  (let* ((extras (nth 4 completion-in-region--data))
+         (dep (plist-get extras :company-deprecated))
+         (mf (let ((completion-extra-properties extras))
+               (run-hook-with-args-until-success 'corfu-margin-formatters corfu--metadata))))
     (setq cands
-          (if-let ((aff (or (corfu--metadata-get 'affixation-function)
-                            (plist-get completion-extra-properties :affixation-function))))
+          (if-let ((aff (corfu--metadata-get 'affixation-function)))
               (funcall aff cands)
-            (if-let ((ann (or (corfu--metadata-get 'annotation-function)
-                              (plist-get completion-extra-properties :annotation-function))))
+            (if-let ((ann (corfu--metadata-get 'annotation-function)))
                 (cl-loop for cand in cands collect
                          (let ((suff (or (funcall ann cand) "")))
                            ;; The default completion UI adds the
