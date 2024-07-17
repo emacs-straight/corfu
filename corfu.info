@@ -1,4 +1,4 @@
-This is docBkicOM.info, produced by makeinfo version 6.8 from
+This is docqPipQE.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docBkicOM.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docqPipQE.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -65,7 +65,7 @@ Configuration
 
 
 
-File: docBkicOM.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docqPipQE.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -94,7 +94,7 @@ File: docBkicOM.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docBkicOM.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docqPipQE.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -107,7 +107,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: docBkicOM.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docqPipQE.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -136,7 +136,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docBkicOM.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docqPipQE.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -261,7 +261,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docBkicOM.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
+File: docqPipQE.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -315,7 +315,7 @@ the Orderless documentation and source code for further details.
                  completion-styles '(orderless-fast basic))
 
 
-File: docBkicOM.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
+File: docqPipQE.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
 
 4.2 Completing in the minibuffer
 ================================
@@ -324,41 +324,29 @@ Corfu can be used for completion in the minibuffer, since it relies on
 child frames to display the candidates.  The Corfu popup can be shown
 even if it doesn’t fully fit inside the minibuffer.
 
-   By default, ‘global-corfu-mode’ does not activate ‘corfu-mode’ in the
-minibuffer, to avoid interference with specialised minibuffer completion
-UIs like Vertico or Mct.  However you may still want to enable Corfu
-completion for commands like ‘M-:’ (‘eval-expression’) or ‘M-!’
-(‘shell-command’), which read from the minibuffer.  In order to detect
-minibuffers with completion we check if the variable
-‘completion-at-point-functions’ is set locally.
+   ‘global-corfu-mode’ activates ‘corfu-mode’ in the minibuffer if the
+variable ‘global-corfu-minibuffer’ is non-nil.  In order to avoid
+interference with specialised minibuffer completion UIs like Vertico or
+Mct, Corfu is only enabled if the minibuffer sets the variable
+‘completion-at-point-functions’ locally.  This way minibuffers with
+completion can be detected, such that minibuffer commands like ‘M-:’
+(‘eval-expression’) or ‘M-!’ (‘shell-command’) are enhanced with Corfu
+completion.
 
-     (defun corfu-enable-in-minibuffer ()
-       "Enable Corfu in the minibuffer."
-       (when (local-variable-p 'completion-at-point-functions)
-         ;; (setq-local corfu-auto nil) ;; Enable/disable auto completion
-         (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
-                     corfu-popupinfo-delay nil)
-         (corfu-mode 1)))
-     (add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
+   If needed, one can also enable Corfu more generally in all
+minibuffers, as long as no completion UI is active.  In the following
+example we set ‘global-corfu-minibuffer’ to a predicate function, which
+checks for Mct and Vertico.  Furthermore we ensure that Corfu is not
+enabled if a password is read from the minibuffer.
 
-   This is not recommended, but one can also enable Corfu more generally
-for every minibuffer, as long as no completion UI is active.  In the
-following example we check for Mct and Vertico.  Furthermore we ensure
-that Corfu is not enabled if a password is read from the minibuffer.
-
-     (defun corfu-enable-always-in-minibuffer ()
-       "Enable Corfu in the minibuffer if Vertico/Mct are not active."
-       (unless (or (bound-and-true-p mct--active)
-                   (bound-and-true-p vertico--input)
-                   (eq (current-local-map) read-passwd-map))
-         ;; (setq-local corfu-auto nil) ;; Enable/disable auto completion
-         (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
-                     corfu-popupinfo-delay nil)
-         (corfu-mode 1)))
-     (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
+     (setq global-corfu-minibuffer
+           (lambda ()
+             (not (or (bound-and-true-p mct--active)
+                      (bound-and-true-p vertico--input)
+                      (eq (current-local-map) read-passwd-map)))))
 
 
-File: docBkicOM.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docqPipQE.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.3 Completing in the Eshell or Shell
 =====================================
@@ -409,7 +397,7 @@ and eventually report any remaining Pcomplete issues upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docBkicOM.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docqPipQE.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.4 Orderless completion
 ========================
@@ -475,7 +463,7 @@ components.
        (global-corfu-mode))
 
 
-File: docBkicOM.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docqPipQE.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.5 TAB-only completion
 =======================
@@ -509,7 +497,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
        (global-corfu-mode))
 
 
-File: docBkicOM.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
+File: docqPipQE.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
 
 4.6 TAB-and-Go completion
 =========================
@@ -539,7 +527,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docBkicOM.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docqPipQE.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.7 Expanding to the common candidate prefix with TAB
 =====================================================
@@ -566,7 +554,7 @@ candidate filtering.
      (setq completion-styles '(tab orderless basic)))
 
 
-File: docBkicOM.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
+File: docqPipQE.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -596,7 +584,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docBkicOM.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docqPipQE.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -636,7 +624,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docBkicOM.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docqPipQE.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -682,7 +670,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docBkicOM.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docqPipQE.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -715,7 +703,7 @@ File: docBkicOM.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docBkicOM.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docqPipQE.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -743,7 +731,7 @@ produce a completion log in the messages buffer.
      (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
 
 
-File: docBkicOM.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docqPipQE.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -762,17 +750,17 @@ Node: Key bindings4284
 Node: Configuration5623
 Node: Auto completion11419
 Node: Completing in the minibuffer13941
-Node: Completing in the Eshell or Shell16143
-Node: Orderless completion18702
-Node: TAB-only completion21779
-Node: TAB-and-Go completion23158
-Node: Expanding to the common candidate prefix with TAB24264
-Node: Transfer completion to the minibuffer25679
-Node: Extensions27132
-Node: Complementary packages28933
-Node: Alternatives31163
-Node: Debugging Corfu32909
-Node: Contributions33965
+Node: Completing in the Eshell or Shell15439
+Node: Orderless completion17998
+Node: TAB-only completion21075
+Node: TAB-and-Go completion22454
+Node: Expanding to the common candidate prefix with TAB23560
+Node: Transfer completion to the minibuffer24975
+Node: Extensions26428
+Node: Complementary packages28229
+Node: Alternatives30459
+Node: Debugging Corfu32205
+Node: Contributions33261
 
 End Tag Table
 
