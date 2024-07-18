@@ -1,4 +1,4 @@
-This is docqPipQE.info, produced by makeinfo version 6.8 from
+This is docroUI8x.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docqPipQE.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docroUI8x.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -65,7 +65,7 @@ Configuration
 
 
 
-File: docqPipQE.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docroUI8x.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -94,7 +94,7 @@ File: docqPipQE.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docqPipQE.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docroUI8x.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -107,7 +107,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: docqPipQE.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docroUI8x.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -136,7 +136,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docqPipQE.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docroUI8x.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -261,7 +261,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docqPipQE.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
+File: docroUI8x.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -315,7 +315,7 @@ the Orderless documentation and source code for further details.
                  completion-styles '(orderless-fast basic))
 
 
-File: docqPipQE.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
+File: docroUI8x.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
 
 4.2 Completing in the minibuffer
 ================================
@@ -346,7 +346,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docqPipQE.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docroUI8x.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.3 Completing in the Eshell or Shell
 =====================================
@@ -397,7 +397,7 @@ and eventually report any remaining Pcomplete issues upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docqPipQE.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docroUI8x.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.4 Orderless completion
 ========================
@@ -463,7 +463,7 @@ components.
        (global-corfu-mode))
 
 
-File: docqPipQE.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docroUI8x.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.5 TAB-only completion
 =======================
@@ -497,7 +497,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
        (global-corfu-mode))
 
 
-File: docqPipQE.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
+File: docroUI8x.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
 
 4.6 TAB-and-Go completion
 =========================
@@ -527,7 +527,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docqPipQE.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docroUI8x.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.7 Expanding to the common candidate prefix with TAB
 =====================================================
@@ -554,7 +554,7 @@ candidate filtering.
      (setq completion-styles '(tab orderless basic)))
 
 
-File: docqPipQE.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
+File: docroUI8x.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -584,7 +584,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docqPipQE.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docroUI8x.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -624,7 +624,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docqPipQE.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docroUI8x.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -670,7 +670,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docqPipQE.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docroUI8x.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -703,7 +703,7 @@ File: docqPipQE.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docqPipQE.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docroUI8x.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -731,7 +731,7 @@ produce a completion log in the messages buffer.
      (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
 
 
-File: docqPipQE.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docroUI8x.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
