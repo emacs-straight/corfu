@@ -1,4 +1,4 @@
-This is docwm03Ph.info, produced by makeinfo version 6.8 from
+This is docTOPOtN.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docwm03Ph.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docTOPOtN.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -65,7 +65,7 @@ Configuration
 
 
 
-File: docwm03Ph.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docTOPOtN.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -94,7 +94,7 @@ File: docwm03Ph.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docwm03Ph.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docTOPOtN.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -107,7 +107,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: docwm03Ph.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docTOPOtN.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -136,7 +136,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docwm03Ph.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docTOPOtN.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -165,7 +165,7 @@ t before turning on ‘global-corfu-mode’.
        ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
        ;; (corfu-scroll-margin 5)        ;; Use scroll margin
 
-       ;; Enable Corfu only for certain modes.
+       ;; Enable Corfu only for certain modes. See also `global-corfu-modes'.
        ;; :hook ((prog-mode . corfu-mode)
        ;;        (shell-mode . corfu-mode)
        ;;        (eshell-mode . corfu-mode))
@@ -261,7 +261,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docwm03Ph.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
+File: docTOPOtN.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -315,7 +315,7 @@ the Orderless documentation and source code for further details.
                  completion-styles '(orderless-fast basic))
 
 
-File: docwm03Ph.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
+File: docTOPOtN.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
 
 4.2 Completing in the minibuffer
 ================================
@@ -346,7 +346,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docwm03Ph.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docTOPOtN.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.3 Completing in the Eshell or Shell
 =====================================
@@ -381,23 +381,19 @@ options.
    Pcomplete has a few bugs on Emacs 28 and older.  We can work around
 the issues with the Cape (https://github.com/minad/cape) library
 (Completion at point extensions).  Cape provides wrappers which sanitize
-the Pcomplete function.  If you use Emacs 28 or older installing these
-advices is recommended such that Pcomplete works properly.  On Emacs 29
-the advices should not be necessary anymore, since most relevant bugs
-have been fixed.  I therefore recommend to avoid the advices on Emacs 29
-and eventually report any remaining Pcomplete issues upstream.
+the Pcomplete function.  On Emacs 29 the advices should not be necessary
+anymore, since most relevant bugs have been fixed.  In case you discover
+any remaining Pcomplete issues, please report them upstream.
 
-     ;; The advices are only needed on Emacs 28 and older.
+     ;; Sanitize the `pcomplete-completions-at-point' Capf.  The Capf has undesired
+     ;; side effects on Emacs 28 and earlier.  These advices are not needed on Emacs
+     ;; 29 and newer.
      (when (< emacs-major-version 29)
-       ;; Silence the pcomplete capf. Hide errors or messages.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
-
-       ;; Ensure that pcomplete does not write to the buffer and behaves as a
-       ;; `completion-at-point-function' without side-effects.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docwm03Ph.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docTOPOtN.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.4 Orderless completion
 ========================
@@ -463,7 +459,7 @@ components.
        (global-corfu-mode))
 
 
-File: docwm03Ph.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docTOPOtN.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.5 TAB-only completion
 =======================
@@ -497,7 +493,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
        (global-corfu-mode))
 
 
-File: docwm03Ph.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
+File: docTOPOtN.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
 
 4.6 TAB-and-Go completion
 =========================
@@ -527,7 +523,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docwm03Ph.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docTOPOtN.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.7 Expanding to the common candidate prefix with TAB
 =====================================================
@@ -554,7 +550,7 @@ candidate filtering.
      (setq completion-styles '(tab orderless basic)))
 
 
-File: docwm03Ph.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
+File: docTOPOtN.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -584,7 +580,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docwm03Ph.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docTOPOtN.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -624,7 +620,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docwm03Ph.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docTOPOtN.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -670,7 +666,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docwm03Ph.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docTOPOtN.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -703,7 +699,7 @@ File: docwm03Ph.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docwm03Ph.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docTOPOtN.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -731,7 +727,7 @@ produce a completion log in the messages buffer.
      (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
 
 
-File: docwm03Ph.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docTOPOtN.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -748,19 +744,19 @@ Node: Features2308
 Node: Installation3769
 Node: Key bindings4284
 Node: Configuration5623
-Node: Auto completion11419
-Node: Completing in the minibuffer13941
-Node: Completing in the Eshell or Shell15439
-Node: Orderless completion17998
-Node: TAB-only completion21075
-Node: TAB-and-Go completion22454
-Node: Expanding to the common candidate prefix with TAB23560
-Node: Transfer completion to the minibuffer24975
-Node: Extensions26428
-Node: Complementary packages28229
-Node: Alternatives30459
-Node: Debugging Corfu32205
-Node: Contributions33261
+Node: Auto completion11450
+Node: Completing in the minibuffer13972
+Node: Completing in the Eshell or Shell15470
+Node: Orderless completion17814
+Node: TAB-only completion20891
+Node: TAB-and-Go completion22270
+Node: Expanding to the common candidate prefix with TAB23376
+Node: Transfer completion to the minibuffer24791
+Node: Extensions26244
+Node: Complementary packages28045
+Node: Alternatives30275
+Node: Debugging Corfu32021
+Node: Contributions33077
 
 End Tag Table
 
