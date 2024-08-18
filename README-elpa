@@ -493,11 +493,9 @@ Table of Contents
   │ 	;; Option 1: Unbind RET completely
   │ 	;;; ("RET" . nil)
   │ 	;; Option 2: Use RET only in shell modes
-  │ 	("RET" . (menu-item
-  │ 		  "" nil :filter
-  │ 		  (lambda (&optional _)
-  │ 		    (and (or (derived-mode-p 'eshell-mode) (derived-mode-p 'comint-mode))
-  │ 			 #'corfu-send)))))
+  │ 	:filter
+  │ 	(or (derived-mode-p 'eshell-mode) (derived-mode-p 'comint-mode))
+  │ 	("RET" . corfu-send))
   │ 
   │   :init
   │   (global-corfu-mode))
