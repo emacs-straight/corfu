@@ -1,4 +1,4 @@
-This is docLvIOEV.info, produced by makeinfo version 6.8 from
+This is doc8iVYVa.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docLvIOEV.info,  Node: Top,  Next: Features,  Up: (dir)
+File: doc8iVYVa.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -65,7 +65,7 @@ Configuration
 
 
 
-File: docLvIOEV.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: doc8iVYVa.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -94,7 +94,7 @@ File: docLvIOEV.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docLvIOEV.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: doc8iVYVa.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -107,7 +107,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: docLvIOEV.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: doc8iVYVa.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -136,7 +136,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docLvIOEV.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: doc8iVYVa.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -213,17 +213,16 @@ by my Cape (https://github.com/minad/cape) package.
        (add-to-list 'dabbrev-ignored-buffer-modes 'pdf-view-mode)
        (add-to-list 'dabbrev-ignored-buffer-modes 'tags-table-mode))
 
-   If you start to configure the package more deeply, I recommend to
-give the Orderless completion style a try for filtering.  Orderless
-completion is different from the familiar prefix TAB completion.  Corfu
-can be used with the default completion styles.  The use of Orderless is
-not a necessity.
+   If you start to configure Corfu more deeply, I recommend to give the
+Orderless completion style a try for filtering.  Orderless completion is
+different from the familiar prefix TAB completion.  Note that Orderless
+is not a necessity; Corfu can be used as well with the default
+completion styles.
 
      ;; Optionally use the `orderless' completion style.
      (use-package orderless
        :custom
-       ;; Configure a custom style dispatcher (see the Consult wiki)
-       ;; (orderless-style-dispatchers '(+orderless-dispatch))
+       ;; (orderless-style-dispatchers '(orderless-affix-dispatch))
        ;; (orderless-component-separator #'orderless-escapable-split-on-space)
        (completion-styles '(orderless basic))
        (completion-category-defaults nil)
@@ -232,9 +231,7 @@ not a necessity.
    The ‘basic’ completion style is specified as fallback in addition to
 ‘orderless’ in order to ensure that completion commands which rely on
 dynamic completion tables, e.g., ‘completion-table-dynamic’ or
-‘completion-table-in-turn’, work correctly.  See ‘+orderless-dispatch’
-in the Consult wiki (https://github.com/minad/consult/wiki) for an
-advanced Orderless style dispatcher.  Additionally enable
+‘completion-table-in-turn’, work correctly.  Additionally enable
 ‘partial-completion’ for file path expansion.  ‘partial-completion’ is
 important for file wildcard support.  Multiple files can be opened at
 once with ‘find-file’ if you enter a wildcard.  You may also give the
@@ -261,7 +258,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docLvIOEV.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
+File: doc8iVYVa.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -315,7 +312,7 @@ the Orderless documentation and source code for further details.
                  completion-styles '(orderless-fast basic))
 
 
-File: docLvIOEV.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
+File: doc8iVYVa.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
 
 4.2 Completing in the minibuffer
 ================================
@@ -346,7 +343,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docLvIOEV.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: doc8iVYVa.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.3 Completing in the Eshell or Shell
 =====================================
@@ -393,7 +390,7 @@ any remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docLvIOEV.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: doc8iVYVa.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.4 Orderless completion
 ========================
@@ -459,7 +456,7 @@ components.
        (global-corfu-mode))
 
 
-File: docLvIOEV.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: doc8iVYVa.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.5 TAB-only completion
 =======================
@@ -491,7 +488,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docLvIOEV.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
+File: doc8iVYVa.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
 
 4.6 TAB-and-Go completion
 =========================
@@ -521,7 +518,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docLvIOEV.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: doc8iVYVa.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.7 Expanding to the common candidate prefix with TAB
 =====================================================
@@ -548,7 +545,7 @@ candidate filtering.
      (setq completion-styles '(tab orderless basic)))
 
 
-File: docLvIOEV.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
+File: doc8iVYVa.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -578,7 +575,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docLvIOEV.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: doc8iVYVa.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -618,7 +615,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docLvIOEV.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: doc8iVYVa.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -664,7 +661,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docLvIOEV.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: doc8iVYVa.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -697,7 +694,7 @@ File: docLvIOEV.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docLvIOEV.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: doc8iVYVa.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -725,7 +722,7 @@ produce a completion log in the messages buffer.
      (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
 
 
-File: docLvIOEV.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: doc8iVYVa.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -742,19 +739,19 @@ Node: Features2308
 Node: Installation3769
 Node: Key bindings4284
 Node: Configuration5623
-Node: Auto completion11450
-Node: Completing in the minibuffer13972
-Node: Completing in the Eshell or Shell15470
-Node: Orderless completion17814
-Node: TAB-only completion20891
-Node: TAB-and-Go completion22264
-Node: Expanding to the common candidate prefix with TAB23370
-Node: Transfer completion to the minibuffer24785
-Node: Extensions26238
-Node: Complementary packages28039
-Node: Alternatives30269
-Node: Debugging Corfu32015
-Node: Contributions33071
+Node: Auto completion11251
+Node: Completing in the minibuffer13773
+Node: Completing in the Eshell or Shell15271
+Node: Orderless completion17615
+Node: TAB-only completion20692
+Node: TAB-and-Go completion22065
+Node: Expanding to the common candidate prefix with TAB23171
+Node: Transfer completion to the minibuffer24586
+Node: Extensions26039
+Node: Complementary packages27840
+Node: Alternatives30070
+Node: Debugging Corfu31816
+Node: Contributions32872
 
 End Tag Table
 

@@ -207,18 +207,17 @@ Table of Contents
   │   (add-to-list 'dabbrev-ignored-buffer-modes 'tags-table-mode))
   └────
 
-  If you start to configure the package more deeply, I recommend to give
-  the Orderless completion style a try for filtering. Orderless
-  completion is different from the familiar prefix TAB completion. Corfu
-  can be used with the default completion styles. The use of Orderless
-  is not a necessity.
+  If you start to configure Corfu more deeply, I recommend to give the
+  Orderless completion style a try for filtering. Orderless completion
+  is different from the familiar prefix TAB completion. Note that
+  Orderless is not a necessity; Corfu can be used as well with the
+  default completion styles.
 
   ┌────
   │ ;; Optionally use the `orderless' completion style.
   │ (use-package orderless
   │   :custom
-  │   ;; Configure a custom style dispatcher (see the Consult wiki)
-  │   ;; (orderless-style-dispatchers '(+orderless-dispatch))
+  │   ;; (orderless-style-dispatchers '(orderless-affix-dispatch))
   │   ;; (orderless-component-separator #'orderless-escapable-split-on-space)
   │   (completion-styles '(orderless basic))
   │   (completion-category-defaults nil)
@@ -228,13 +227,11 @@ Table of Contents
   The `basic' completion style is specified as fallback in addition to
   `orderless' in order to ensure that completion commands which rely on
   dynamic completion tables, e.g., `completion-table-dynamic' or
-  `completion-table-in-turn', work correctly. See `+orderless-dispatch'
-  in the [Consult wiki] for an advanced Orderless style
-  dispatcher. Additionally enable `partial-completion' for file path
-  expansion. `partial-completion' is important for file wildcard
-  support. Multiple files can be opened at once with `find-file' if you
-  enter a wildcard. You may also give the `initials' completion style a
-  try.
+  `completion-table-in-turn', work correctly. Additionally enable
+  `partial-completion' for file path expansion.  `partial-completion' is
+  important for file wildcard support. Multiple files can be opened at
+  once with `find-file' if you enter a wildcard. You may also give the
+  `initials' completion style a try.
 
   See also the [Corfu Wiki] and the [Cape manual] for additional Capf
   configuration tips. For more general documentation read the chapter
@@ -244,8 +241,6 @@ Table of Contents
 
 
 [Cape] <https://github.com/minad/cape>
-
-[Consult wiki] <https://github.com/minad/consult/wiki>
 
 [Corfu Wiki] <https://github.com/minad/corfu/wiki>
 
