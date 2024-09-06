@@ -1,4 +1,4 @@
-This is docxcKCQb.info, produced by makeinfo version 6.8 from
+This is docHGV7zP.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docxcKCQb.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docHGV7zP.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -60,12 +60,11 @@ Configuration
 * Orderless completion::
 * TAB-only completion::
 * TAB-and-Go completion::
-* Expanding to the common candidate prefix with TAB::
 * Transfer completion to the minibuffer::
 
 
 
-File: docxcKCQb.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docHGV7zP.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -94,7 +93,7 @@ File: docxcKCQb.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docxcKCQb.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docHGV7zP.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -107,7 +106,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: docxcKCQb.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docHGV7zP.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -136,7 +135,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docxcKCQb.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docHGV7zP.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -214,10 +213,10 @@ by my Cape (https://github.com/minad/cape) package.
        (add-to-list 'dabbrev-ignored-buffer-modes 'tags-table-mode))
 
    If you start to configure Corfu more deeply, I recommend to give the
-Orderless completion style a try for filtering.  Orderless completion is
-different from the familiar prefix TAB completion.  Note that Orderless
-is not a necessity; Corfu can be used as well with the default
-completion styles.
+Orderless completion style a try for filtering.  Orderless completion
+offers more flexible filtering than the default completion styles.  Note
+that Orderless is not a necessity; Corfu can be used just as well with
+the default completion styles.
 
      ;; Optionally use the `orderless' completion style.
      (use-package orderless
@@ -254,11 +253,10 @@ completion in the Elisp manual
 * Orderless completion::
 * TAB-only completion::
 * TAB-and-Go completion::
-* Expanding to the common candidate prefix with TAB::
 * Transfer completion to the minibuffer::
 
 
-File: docxcKCQb.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
+File: docHGV7zP.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -312,7 +310,7 @@ the Orderless documentation and source code for further details.
                  completion-styles '(orderless-fast basic))
 
 
-File: docxcKCQb.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
+File: docHGV7zP.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
 
 4.2 Completing in the minibuffer
 ================================
@@ -343,7 +341,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docxcKCQb.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docHGV7zP.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.3 Completing in the Eshell or Shell
 =====================================
@@ -390,7 +388,7 @@ any remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docxcKCQb.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docHGV7zP.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.4 Orderless completion
 ========================
@@ -456,7 +454,7 @@ components.
        (global-corfu-mode))
 
 
-File: docxcKCQb.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docHGV7zP.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.5 TAB-only completion
 =======================
@@ -488,7 +486,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docxcKCQb.info,  Node: TAB-and-Go completion,  Next: Expanding to the common candidate prefix with TAB,  Prev: TAB-only completion,  Up: Configuration
+File: docHGV7zP.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.6 TAB-and-Go completion
 =========================
@@ -518,36 +516,9 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docxcKCQb.info,  Node: Expanding to the common candidate prefix with TAB,  Next: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docHGV7zP.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
-4.7 Expanding to the common candidate prefix with TAB
-=====================================================
-
-If you leave the default configuration of the completion styles, such
-that the ‘basic’ completion style is still present, then pressing
-‘M-TAB’ (‘corfu-expand’) will expand the current input to the common
-prefix of all completion candidates.  In contrast, ‘TAB’
-(‘corfu-complete’) behaves differently and expands input to the
-currently selected candidate.
-
-   If you use the ‘orderless’ completion style, then expansion works
-differently by default.  Orderless only expands to single matching
-candidates, since due to its multi-component input, there does not
-necessarily exist an expansion to a common candidate prefix.  However it
-is possible to define a separate ‘tab’ completion style.  The ‘tab’
-completion style will only take over ‘TAB’ completion (if prefix
-expansion is possible), but besides that won’t affect Orderless
-candidate filtering.
-
-     (add-to-list 'completion-styles-alist
-                  '(tab completion-basic-try-completion ignore
-                    "Completion style which provides TAB completion only."))
-     (setq completion-styles '(tab orderless basic)))
-
-
-File: docxcKCQb.info,  Node: Transfer completion to the minibuffer,  Prev: Expanding to the common candidate prefix with TAB,  Up: Configuration
-
-4.8 Transfer completion to the minibuffer
+4.7 Transfer completion to the minibuffer
 =========================================
 
 Sometimes it is useful to transfer the Corfu completion session to the
@@ -575,7 +546,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docxcKCQb.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docHGV7zP.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -615,7 +586,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docxcKCQb.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docHGV7zP.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -661,7 +632,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docxcKCQb.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docHGV7zP.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -694,7 +665,7 @@ File: docxcKCQb.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docxcKCQb.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docHGV7zP.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -722,7 +693,7 @@ produce a completion log in the messages buffer.
      (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
 
 
-File: docxcKCQb.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docHGV7zP.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -735,23 +706,22 @@ copyright assignment to the FSF.
 
 Tag Table:
 Node: Top208
-Node: Features2308
-Node: Installation3769
-Node: Key bindings4284
-Node: Configuration5623
-Node: Auto completion11251
-Node: Completing in the minibuffer13773
-Node: Completing in the Eshell or Shell15271
-Node: Orderless completion17615
-Node: TAB-only completion20692
-Node: TAB-and-Go completion22065
-Node: Expanding to the common candidate prefix with TAB23171
-Node: Transfer completion to the minibuffer24586
-Node: Extensions26039
-Node: Complementary packages27840
-Node: Alternatives30070
-Node: Debugging Corfu31816
-Node: Contributions32872
+Node: Features2254
+Node: Installation3715
+Node: Key bindings4230
+Node: Configuration5569
+Node: Auto completion11161
+Node: Completing in the minibuffer13683
+Node: Completing in the Eshell or Shell15181
+Node: Orderless completion17525
+Node: TAB-only completion20602
+Node: TAB-and-Go completion21975
+Node: Transfer completion to the minibuffer23069
+Node: Extensions24494
+Node: Complementary packages26295
+Node: Alternatives28525
+Node: Debugging Corfu30271
+Node: Contributions31327
 
 End Tag Table
 

@@ -40,8 +40,7 @@ Table of Contents
 .. 4. Orderless completion
 .. 5. TAB-only completion
 .. 6. TAB-and-Go completion
-.. 7. Expanding to the common candidate prefix with TAB
-.. 8. Transfer completion to the minibuffer
+.. 7. Transfer completion to the minibuffer
 5. Extensions
 6. Complementary packages
 7. Alternatives
@@ -209,9 +208,9 @@ Table of Contents
 
   If you start to configure Corfu more deeply, I recommend to give the
   Orderless completion style a try for filtering. Orderless completion
-  is different from the familiar prefix TAB completion. Note that
-  Orderless is not a necessity; Corfu can be used as well with the
-  default completion styles.
+  offers more flexible filtering than the default completion
+  styles. Note that Orderless is not a necessity; Corfu can be used just
+  as well with the default completion styles.
 
   ┌────
   │ ;; Optionally use the `orderless' completion style.
@@ -527,34 +526,7 @@ Table of Contents
   └────
 
 
-4.7 Expanding to the common candidate prefix with TAB
-─────────────────────────────────────────────────────
-
-  If you leave the default configuration of the completion styles, such
-  that the `basic' completion style is still present, then pressing
-  `M-TAB' (`corfu-expand') will expand the current input to the common
-  prefix of all completion candidates. In contrast, `TAB'
-  (`corfu-complete') behaves differently and expands input to the
-  currently selected candidate.
-
-  If you use the `orderless' completion style, then expansion works
-  differently by default. Orderless only expands to single matching
-  candidates, since due to its multi-component input, there does not
-  necessarily exist an expansion to a common candidate prefix. However
-  it is possible to define a separate `tab' completion style. The `tab'
-  completion style will only take over `TAB' completion (if prefix
-  expansion is possible), but besides that won't affect Orderless
-  candidate filtering.
-
-  ┌────
-  │ (add-to-list 'completion-styles-alist
-  │ 	     '(tab completion-basic-try-completion ignore
-  │ 	       "Completion style which provides TAB completion only."))
-  │ (setq completion-styles '(tab orderless basic)))
-  └────
-
-
-4.8 Transfer completion to the minibuffer
+4.7 Transfer completion to the minibuffer
 ─────────────────────────────────────────
 
   Sometimes it is useful to transfer the Corfu completion session to the
