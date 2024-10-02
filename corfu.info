@@ -1,4 +1,4 @@
-This is docnNbuS4.info, produced by makeinfo version 6.8 from
+This is docbBrUBb.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docnNbuS4.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docbBrUBb.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -35,10 +35,12 @@ Additional Capfs and completion utilities are provided by the Cape
 mixed fonts and font sizes won’t interfere with the rendering.  On
 non-graphical displays, Corfu falls back to the default setting of the
 ‘completion-in-region-function’.  There is an effort towards child frame
-support for terminal Emacs, which will hopefully arrive in Emacs 31 or
-32.  Until then you can use the corfu-terminal
-(https://codeberg.org/akib/emacs-corfu-terminal) package as a stop-gap
-solution, which provides an alternative display based on overlays.
+support for terminal Emacs
+(https://lists.gnu.org/archive/html/emacs-devel/2024-10/msg00003.html),
+which will hopefully arrive in Emacs 31 or 32.  Until then you can use
+the corfu-terminal (https://codeberg.org/akib/emacs-corfu-terminal)
+package as a stop-gap solution, which provides an alternative display
+based on overlays.
 
 * Menu:
 
@@ -66,7 +68,7 @@ Configuration
 
 
 
-File: docnNbuS4.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docbBrUBb.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -95,7 +97,7 @@ File: docnNbuS4.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docnNbuS4.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docbBrUBb.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -108,7 +110,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: docnNbuS4.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docbBrUBb.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -137,7 +139,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docnNbuS4.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docbBrUBb.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -258,7 +260,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docnNbuS4.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
+File: docbBrUBb.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -312,7 +314,7 @@ the Orderless documentation and source code for further details.
                  completion-styles '(orderless-fast basic))
 
 
-File: docnNbuS4.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
+File: docbBrUBb.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
 
 4.2 Completing in the minibuffer
 ================================
@@ -343,7 +345,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docnNbuS4.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docbBrUBb.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.3 Completing in the Eshell or Shell
 =====================================
@@ -390,7 +392,7 @@ any remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docnNbuS4.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docbBrUBb.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.4 Orderless completion
 ========================
@@ -456,7 +458,7 @@ components.
        (global-corfu-mode))
 
 
-File: docnNbuS4.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docbBrUBb.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.5 TAB-only completion
 =======================
@@ -488,7 +490,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docnNbuS4.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: docbBrUBb.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.6 TAB-and-Go completion
 =========================
@@ -518,7 +520,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docnNbuS4.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docbBrUBb.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.7 Transfer completion to the minibuffer
 =========================================
@@ -548,7 +550,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docnNbuS4.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docbBrUBb.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -588,7 +590,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docnNbuS4.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docbBrUBb.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -635,7 +637,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docnNbuS4.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docbBrUBb.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -668,7 +670,7 @@ File: docnNbuS4.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docnNbuS4.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docbBrUBb.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -696,7 +698,7 @@ produce a completion log in the messages buffer.
      (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
 
 
-File: docnNbuS4.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docbBrUBb.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -709,22 +711,22 @@ copyright assignment to the FSF.
 
 Tag Table:
 Node: Top208
-Node: Features2454
-Node: Installation3915
-Node: Key bindings4430
-Node: Configuration5769
-Node: Auto completion11341
-Node: Completing in the minibuffer13863
-Node: Completing in the Eshell or Shell15361
-Node: Orderless completion17705
-Node: TAB-only completion20782
-Node: TAB-and-Go completion22155
-Node: Transfer completion to the minibuffer23249
-Node: Extensions24674
-Node: Complementary packages26475
-Node: Alternatives28733
-Node: Debugging Corfu30479
-Node: Contributions31535
+Node: Features2525
+Node: Installation3986
+Node: Key bindings4501
+Node: Configuration5840
+Node: Auto completion11412
+Node: Completing in the minibuffer13934
+Node: Completing in the Eshell or Shell15432
+Node: Orderless completion17776
+Node: TAB-only completion20853
+Node: TAB-and-Go completion22226
+Node: Transfer completion to the minibuffer23320
+Node: Extensions24745
+Node: Complementary packages26546
+Node: Alternatives28804
+Node: Debugging Corfu30550
+Node: Contributions31606
 
 End Tag Table
 
