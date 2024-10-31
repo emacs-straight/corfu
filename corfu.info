@@ -1,4 +1,4 @@
-This is doctKlrPw.info, produced by makeinfo version 6.8 from
+This is doc3kbrk7.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: doctKlrPw.info,  Node: Top,  Next: Features,  Up: (dir)
+File: doc3kbrk7.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -68,7 +68,7 @@ Configuration
 
 
 
-File: doctKlrPw.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: doc3kbrk7.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -97,7 +97,7 @@ File: doctKlrPw.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: doctKlrPw.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: doc3kbrk7.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -110,7 +110,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: doctKlrPw.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: doc3kbrk7.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -139,7 +139,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: doctKlrPw.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: doc3kbrk7.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -260,7 +260,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: doctKlrPw.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
+File: doc3kbrk7.info,  Node: Auto completion,  Next: Completing in the minibuffer,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -314,7 +314,7 @@ the Orderless documentation and source code for further details.
                  completion-styles '(orderless-fast basic))
 
 
-File: doctKlrPw.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
+File: doc3kbrk7.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Auto completion,  Up: Configuration
 
 4.2 Completing in the minibuffer
 ================================
@@ -345,7 +345,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: doctKlrPw.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: doc3kbrk7.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.3 Completing in the Eshell or Shell
 =====================================
@@ -392,7 +392,7 @@ any remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: doctKlrPw.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: doc3kbrk7.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.4 Orderless completion
 ========================
@@ -458,7 +458,7 @@ components.
        (global-corfu-mode))
 
 
-File: doctKlrPw.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: doc3kbrk7.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.5 TAB-only completion
 =======================
@@ -490,7 +490,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: doctKlrPw.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: doc3kbrk7.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.6 TAB-and-Go completion
 =========================
@@ -520,7 +520,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: doctKlrPw.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: doc3kbrk7.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.7 Transfer completion to the minibuffer
 =========================================
@@ -550,7 +550,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: doctKlrPw.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: doc3kbrk7.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -590,7 +590,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: doctKlrPw.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: doc3kbrk7.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -622,11 +622,13 @@ look into complementary packages to enhance your setup.
      Dabbrev backend ‘cape-dabbrev’.  Cape provides the
      ‘cape-company-to-capf’ adapter to reuse Company backends in Corfu.
 
-   • nerd-icons-corfu (https://github.com/LuigiPiucco/nerd-icons-corfu),
-     kind-icon (https://github.com/jdtsmith/kind-icon): Icons are
+   • kind-icon (https://github.com/jdtsmith/kind-icon), nerd-icons-corfu
+     (https://github.com/LuigiPiucco/nerd-icons-corfu): Icons are
      supported by Corfu via external packages.  The nerd-icons-corfu
-     package relies on the Nerd icon font, which is even supported on
+     package relies on the Nerd icon font, which is supported on
      terminal, while kind-icon uses SVGs from monochromatic icon sets.
+     As of today, kind-icon is the only recommended library since it
+     ensures correct icon alignment.
 
    • Tempel (https://github.com/minad/tempel): Tiny template/snippet
      package with templates in Lisp syntax, which can be used in
@@ -637,7 +639,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: doctKlrPw.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: doc3kbrk7.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -670,7 +672,7 @@ File: doctKlrPw.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: doctKlrPw.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: doc3kbrk7.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -698,7 +700,7 @@ produce a completion log in the messages buffer.
      (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
 
 
-File: doctKlrPw.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: doc3kbrk7.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -724,9 +726,9 @@ Node: TAB-and-Go completion22226
 Node: Transfer completion to the minibuffer23320
 Node: Extensions24745
 Node: Complementary packages26546
-Node: Alternatives28804
-Node: Debugging Corfu30550
-Node: Contributions31606
+Node: Alternatives28905
+Node: Debugging Corfu30651
+Node: Contributions31707
 
 End Tag Table
 
