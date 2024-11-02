@@ -130,7 +130,6 @@ documentation from the backend is usually expensive."
     (left-margin-width . 1)
     (right-margin-width . 1)
     (word-wrap . t)
-    (fringe-indicator-alist (continuation))
     (char-property-alias-alist (face font-lock-face)))
   "Buffer parameters.")
 
@@ -158,6 +157,9 @@ all values are in pixels relative to the origin.  See
 
 (defvar corfu-popupinfo--lock-dir nil
   "Locked position direction of the info popup.")
+
+(defconst corfu-popupinfo--buffer " *corfu-popupinfo*"
+  "Buffer used by the popup.")
 
 (defconst corfu-popupinfo--initial-state
   (mapcar
@@ -244,7 +246,7 @@ all values are in pixels relative to the origin.  See
          (max-height (* lh corfu-popupinfo-max-height))
          (max-width (* cw corfu-popupinfo-max-width)))
     (or (when corfu-popupinfo-resize
-          (with-current-buffer " *corfu-popupinfo*"
+          (with-current-buffer corfu-popupinfo--buffer
             (cl-letf* (((window-dedicated-p) nil)
                        ((window-buffer) (current-buffer))
                        (size (window-text-pixel-size
@@ -352,7 +354,7 @@ form (X Y WIDTH HEIGHT DIR)."
            (coords-changed (not (equal new-coords corfu-popupinfo--coordinates))))
       (when cand-changed
         (if-let ((content (funcall corfu-popupinfo--function candidate)))
-            (with-current-buffer (corfu--make-buffer " *corfu-popupinfo*")
+            (with-current-buffer (corfu--make-buffer corfu-popupinfo--buffer)
               (with-silent-modifications
                 (erase-buffer)
                 (insert content)
@@ -373,21 +375,20 @@ form (X Y WIDTH HEIGHT DIR)."
                           (- (frame-pixel-width corfu-popupinfo--frame) border border)
                           (- (frame-pixel-height corfu-popupinfo--frame) border border)))))
                      (margin-quirk (not corfu-popupinfo--frame)))
-          (setq corfu-popupinfo--frame
-                (corfu--make-frame corfu-popupinfo--frame
-                                   area-x area-y area-w area-h
-                                   " *corfu-popupinfo*")
-                corfu-popupinfo--toggle t
-                corfu-popupinfo--lock-dir area-d
-                corfu-popupinfo--candidate candidate
-                corfu-popupinfo--coordinates new-coords)
-          ;; XXX HACK: Force margin update. For some reason, the call to
-          ;; `set-window-buffer' in `corfu--make-frame' is not effective the
-          ;; first time. Why does Emacs have all these quirks?
-          (when margin-quirk
-            (set-window-buffer
-             (frame-root-window corfu-popupinfo--frame)
-             " *corfu-popupinfo*")))))))
+          (with-current-buffer corfu-popupinfo--buffer
+            (setq corfu-popupinfo--frame
+                  (corfu--make-frame corfu-popupinfo--frame
+                                     area-x area-y area-w area-h)
+                  corfu-popupinfo--toggle t
+                  corfu-popupinfo--lock-dir area-d
+                  corfu-popupinfo--candidate candidate
+                  corfu-popupinfo--coordinates new-coords)
+            ;; XXX HACK: Force margin update. For some reason, the call to
+            ;; `set-window-buffer' in `corfu--make-frame' is not effective the
+            ;; first time. Why does Emacs have all these quirks?
+            (when margin-quirk
+              (set-window-buffer (frame-root-window corfu-popupinfo--frame)
+                                 corfu-popupinfo--buffer))))))))
 
 (defun corfu-popupinfo--hide ()
   "Clear the info popup buffer content and hide it."
@@ -402,7 +403,7 @@ visible, the other window is moved to beginning or end."
   (interactive "P")
   (if (corfu-popupinfo--visible-p)
       (with-selected-frame corfu-popupinfo--frame
-        (with-current-buffer " *corfu-popupinfo*"
+        (with-current-buffer corfu-popupinfo--buffer
           (with-no-warnings
             (end-of-buffer n))))
     (end-of-buffer-other-window n)))
@@ -423,7 +424,7 @@ the other window is scrolled."
   (interactive "p")
   (if (corfu-popupinfo--visible-p)
       (with-selected-frame corfu-popupinfo--frame
-        (with-current-buffer " *corfu-popupinfo*"
+        (with-current-buffer corfu-popupinfo--buffer
           (scroll-up n)))
     (scroll-other-window n)))
 

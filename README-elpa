@@ -82,7 +82,7 @@ Table of Contents
   • Support for candidate annotations (`annotation-function',
     `affixation-function').
   • Deprecated candidates are displayed as crossed out.
-  • Icons can be provided by an external package via margin formatter
+  • Icons are provided by external packages via margin formatter
     functions.
   • Rich set of extensions: Quick keys, Index keys, Sorting by history,
     Candidate documentation in echo area, popup or separate buffer.
@@ -643,9 +643,8 @@ Table of Contents
 
   • [kind-icon], [nerd-icons-corfu]: Icons are supported by Corfu via
     external packages. The nerd-icons-corfu package relies on the Nerd
-    icon font, which is supported on terminal, while kind-icon uses SVGs
-    from monochromatic icon sets.  As of today, kind-icon is the only
-    recommended library since it ensures correct icon alignment.
+    icon font, which is even supported on terminal, while kind-icon uses
+    SVGs from monochromatic icon sets.
 
   • [Tempel]: Tiny template/snippet package with templates in Lisp
     syntax, which can be used in conjunction with Corfu.

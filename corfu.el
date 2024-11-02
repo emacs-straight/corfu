@@ -147,10 +147,9 @@ argument until an appropriate formatter is found.  The function should
 return a formatter function, which takes the candidate string and must
 return a string, possibly an icon.  In order to preserve correct popup
 alignment, the length and display width of the returned string must
-precisely span the same number of fixed number of fixed-width characters
-of the fixed-width popup font, ideally one or two characters.  For
-example the kind-icon package returns a string of length two with a
-display width of two characters."
+precisely span the same number of characters of the fixed-width popup
+font.  For example the kind-icon package returns a string of length 3
+with a display width of 3 characters."
   :type 'hook)
 
 (defcustom corfu-sort-function #'corfu-sort-length-alpha
@@ -209,10 +208,10 @@ See also the settings `corfu-auto-delay', `corfu-auto-prefix' and
 
 (defface corfu-current
   '((((class color) (min-colors 88) (background dark))
-     :background "#00415e" :foreground "white")
+     :background "#00415e" :foreground "white" :extend t)
     (((class color) (min-colors 88) (background light))
-     :background "#c0efff" :foreground "black")
-    (t :background "blue" :foreground "white"))
+     :background "#c0efff" :foreground "black" :extend t)
+    (t :background "blue" :foreground "white" :extend t))
   "Face used to highlight the currently selected candidate.")
 
 (defface corfu-bar
@@ -326,8 +325,6 @@ See also the settings `corfu-auto-delay', `corfu-auto-prefix' and
     (outer-border-width . 0)
     (internal-border-width . 1)
     (child-frame-border-width . 1)
-    (left-fringe . 0)
-    (right-fringe . 0)
     (vertical-scroll-bars . nil)
     (horizontal-scroll-bars . nil)
     (menu-bar-lines . 0)
@@ -352,12 +349,12 @@ See also the settings `corfu-auto-delay', `corfu-auto-prefix' and
     (cursor-type . nil)
     (show-trailing-whitespace . nil)
     (display-line-numbers . nil)
-    (left-fringe-width . nil)
-    (right-fringe-width . nil)
+    (left-fringe-width . 0)
+    (right-fringe-width . 0)
     (left-margin-width . 0)
     (right-margin-width . 0)
     (fringes-outside-margins . 0)
-    (fringe-indicator-alist . nil)
+    (fringe-indicator-alist (continuation) (truncation))
     (indicate-empty-lines . nil)
     (indicate-buffer-boundaries . nil)
     (buffer-read-only . t))
@@ -437,8 +434,8 @@ length override, set to t for manual completion."
          'resize-mode)))
 
 ;; Function adapted from posframe.el by tumashu
-(defun corfu--make-frame (frame x y width height buffer)
-  "Show BUFFER in child frame at X/Y with WIDTH/HEIGHT.
+(defun corfu--make-frame (frame x y width height)
+  "Show current buffer in child frame at X/Y with WIDTH/HEIGHT.
 FRAME is the existing frame."
   (when-let (((frame-live-p frame))
              (timer (frame-parameter frame 'corfu--hide-timer)))
@@ -462,6 +459,8 @@ FRAME is the existing frame."
                    `((parent-frame . ,parent)
                      (minibuffer . ,(minibuffer-window parent))
                      (width . 0) (height . 0) (visibility . nil)
+                     (right-fringe . ,right-fringe-width)
+                     (left-fringe . ,left-fringe-width)
                      ,@corfu--frame-parameters))))
     ;; XXX HACK Setting the same frame-parameter/face-background is not a nop.
     ;; Check before applying the setting. Without the check, the frame flickers
@@ -479,17 +478,20 @@ FRAME is the existing frame."
     ;; overrides the parameter `tool-bar-lines' for every frame, including child
     ;; frames.  The child frame API is a pleasure to work with.  It is full of
     ;; lovely surprises.
-    (let* ((is (frame-parameters frame))
+    (let* ((win (frame-root-window frame))
+           (is (frame-parameters frame))
            (should `((background-color
                       . ,(face-attribute 'corfu-default :background nil 'default))
                      (font . ,(frame-parameter parent 'font))
+                     (right-fringe . ,right-fringe-width)
+                     (left-fringe . ,left-fringe-width)
                      ,@corfu--frame-parameters))
            (diff (cl-loop for p in should for (k . v) = p
                           unless (equal (alist-get k is) v) collect p)))
-      (when diff (modify-frame-parameters frame diff)))
-    (let ((win (frame-root-window frame)))
-      (unless (eq (window-buffer win) buffer)
-        (set-window-buffer win buffer))
+      (when diff (modify-frame-parameters frame diff))
+      ;; XXX HACK: `set-window-buffer' must be called to force fringe update.
+      (when (or diff (eq (window-buffer win) (current-buffer)))
+        (set-window-buffer win (current-buffer)))
       ;; Disallow selection of root window (gh:minad/corfu#63)
       (set-window-parameter win 'no-delete-other-windows t)
       (set-window-parameter win 'no-other-window t)
@@ -739,22 +741,16 @@ FRAME is the existing frame."
          (width (+ pw cw sw))
          ;; -4 because of margins and some additional safety
          (max-width (min corfu-max-width (- (frame-width) 4))))
-    (when (> width max-width)
-      (setq sw (max 0 (- max-width pw cw))
-            width (+ pw cw sw)))
-    (when (< width corfu-min-width)
-      (setq cw (+ cw (- corfu-min-width width))
-            width corfu-min-width))
-    (setq width (min width max-width))
+    (setq width (min (max corfu-min-width width) max-width))
     (list pw width
           (cl-loop for (cand prefix suffix) in cands collect
                    (truncate-string-to-width
                     (concat
-                     prefix (make-string (max 0 (- pw (string-width prefix))) ?\s)
+                     prefix (make-string (- pw (string-width prefix)) ?\s)
                      cand
-                     (when (/= sw 0)
-                       (make-string (+ (max 0 (- cw (string-width cand)))
-                                       (max 0 (- sw (string-width suffix))))
+                     (when (> sw 0)
+                       (make-string (max 0 (- width pw (string-width cand)
+                                              (string-width suffix)))
                                     ?\s))
                      suffix)
                     width)))))
@@ -1021,17 +1017,18 @@ A scroll bar is displayed from LO to LO+BAR."
     (with-current-buffer (corfu--make-buffer " *corfu*")
       (let* ((ch (default-line-height))
              (cw (default-font-width))
+             (fringe (display-graphic-p))
              (ml (ceiling (* cw corfu-left-margin-width)))
-             (mr (ceiling (* cw corfu-right-margin-width)))
-             (bw (ceiling (min mr (* cw corfu-bar-width))))
+             (bw (ceiling (* cw corfu-bar-width)))
+             (mr (max bw (ceiling (* cw corfu-right-margin-width))))
              (marginl (and (> ml 0) (propertize " " 'display `(space :width (,ml)))))
-             (marginr (and (> mr 0) (propertize " " 'display `(space :align-to right))))
-             (sbar (when (> bw 0)
-                     (concat (propertize " " 'display `(space :align-to (- right (,mr))))
-                             (propertize " " 'display `(space :width (,(- mr bw))))
+             (sbar (if fringe
+                       #(" " 0 1 (display (right-fringe corfu--bar corfu-bar)))
+                     (concat (propertize " " 'display `(space :align-to (- right (,bw))))
                              (propertize " " 'face 'corfu-bar 'display `(space :width (,bw))))))
+             (cbar (and fringe #(" " 0 1 (display (right-fringe corfu--bar corfu-current)))))
              (pos (posn-x-y pos))
-             (width (+ (* width cw) ml mr))
+             (width (+ (* width cw) ml mr (if fringe (- bw) 0)))
              ;; XXX HACK: Minimum popup height must be at least 1 line of the
              ;; parent frame (gh:minad/corfu#261).
              (height (max lh (* (length lines) ch)))
@@ -1044,22 +1041,25 @@ A scroll bar is displayed from LO to LO+BAR."
                     (- yb height lh border border)
                   yb))
              (row 0))
+        (setq right-fringe-width (if fringe bw 0))
+        (when (and (> right-fringe-width 0) (not (fringe-bitmap-p 'corfu--bar)))
+          (define-fringe-bitmap 'corfu--bar []))
         (with-silent-modifications
           (erase-buffer)
-          (insert (mapconcat (lambda (line)
-                               (let ((str (concat marginl line
-                                                  (if (and lo (<= lo row (+ lo bar)))
-                                                      sbar
-                                                    marginr))))
-                                 (when (eq row curr)
-                                   (add-face-text-property
-                                    0 (length str) 'corfu-current 'append str))
-                                 (cl-incf row)
-                                 str))
-                             lines "\n"))
+          (apply #'insert
+           (cl-loop for line in lines collect
+                    (let ((str (concat
+                                marginl line
+                                (or (and lo (<= lo row (+ lo bar)) sbar)
+                                    (and (eq row curr) cbar))
+                                "\n")))
+                      (when (eq row curr)
+                        (add-face-text-property
+                         0 (length str) 'corfu-current 'append str))
+                      (cl-incf row)
+                      str)))
           (goto-char (point-min)))
-        (setq corfu--frame (corfu--make-frame corfu--frame x y
-                                              width height (current-buffer)))))))
+        (setq corfu--frame (corfu--make-frame corfu--frame x y width height))))))
 
 (cl-defgeneric corfu--popup-hide ()
   "Hide Corfu popup."
