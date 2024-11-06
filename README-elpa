@@ -4,10 +4,9 @@
 
 
 Corfu enhances in-buffer completion with a small completion popup. The
-current candidates are shown in a popup below or above the point. The
-candidates can be selected by moving up and down. Corfu is the
-minimalistic in-buffer completion counterpart of the [Vertico]
-minibuffer UI.
+current candidates are shown in a popup below or above the point, and
+can be selected by moving up and down. Corfu is the minimalistic
+in-buffer completion counterpart of the [Vertico] minibuffer UI.
 
 Corfu is a small package, which relies on the Emacs completion
 facilities and concentrates on providing a polished completion
@@ -20,7 +19,7 @@ user. Completions at point are either provided by commands like
 implement a Capf. Corfu does not include its own completion
 backends. The Emacs built-in Capfs and the Capfs provided by third-party
 programming language packages are often sufficient. Additional Capfs and
-completion utilities are provided by the [Cape] package.
+completion utilities are provided by the separate [Cape] package.
 
 *NOTE*: Corfu relies on child frames to show the popup, such that mixed
 fonts and font sizes won't interfere with the rendering. On
@@ -70,7 +69,8 @@ Table of Contents
   • The popup can be summoned explicitly by pressing `TAB' at any time.
   • The current candidate is inserted with `TAB' and selected with
     `RET'.
-  • Candidate sorting by prefix, string length and alphabetically.
+  • Sorting by prefix, string length and alphabetically, optionally by
+    history.
   • The selected candidate is previewed (configurable via
     `corfu-preview-current').
   • The selected candidate is automatically committed on further input
@@ -78,7 +78,7 @@ Table of Contents
   • Supports the [Orderless] completion style. The filter string can
     contain arbitrary characters, after inserting a space via `M-SPC'
     (configurable via `corfu-quit-at-boundary' and `corfu-separator').
-  • Lazy completion candidate highlighting for performance.
+  • Lazy candidate highlighting for performance.
   • Support for candidate annotations (`annotation-function',
     `affixation-function').
   • Deprecated candidates are displayed as crossed out.
@@ -154,13 +154,11 @@ Table of Contents
   │   ;; :custom
   │   ;; (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
   │   ;; (corfu-auto t)                 ;; Enable auto completion
-  │   ;; (corfu-separator ?\s)          ;; Orderless field separator
   │   ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
   │   ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
   │   ;; (corfu-preview-current nil)    ;; Disable current candidate preview
   │   ;; (corfu-preselect 'prompt)      ;; Preselect the prompt
   │   ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
-  │   ;; (corfu-scroll-margin 5)        ;; Use scroll margin
   │ 
   │   ;; Enable Corfu only for certain modes. See also `global-corfu-modes'.
   │   ;; :hook ((prog-mode . corfu-mode)
@@ -183,8 +181,8 @@ Table of Contents
   │   ;; `completion-at-point' is often bound to M-TAB.
   │   (tab-always-indent 'complete)
   │ 
-  │   ;; Emacs 30 and newer: Disable Ispell completion function. As an alternative,
-  │   ;; try `cape-dict'.
+  │   ;; Emacs 30 and newer: Disable Ispell completion function.
+  │   ;; Try `cape-dict' as an alternative.
   │   (text-mode-ispell-word-completion nil)
   │ 
   │   ;; Hide commands in M-x which do not apply to the current mode.  Corfu
@@ -213,9 +211,9 @@ Table of Contents
   │   (add-to-list 'dabbrev-ignored-buffer-modes 'tags-table-mode))
   └────
 
-  If you start to configure Corfu more deeply, I recommend to give the
-  Orderless completion style a try for filtering. Orderless completion
-  offers more flexible filtering than the default completion
+  If you start to configure Corfu more thoroughly, I recommend to give
+  the Orderless completion style a try for filtering. Orderless
+  completion offers more flexible filtering than the default completion
   styles. Note that Orderless is not a necessity; Corfu can be used just
   as well with the default completion styles.
 
@@ -320,8 +318,9 @@ Table of Contents
 ────────────────────────────────
 
   Corfu can be used for completion in the minibuffer, since it relies on
-  child frames to display the candidates. The Corfu popup can be shown
-  even if it doesn't fully fit inside the minibuffer.
+  child frames to display the candidates. The Corfu popup floats on top
+  of the Emacs frame and can be shown even if it doesn't fit inside the
+  minibuffer.
 
   `global-corfu-mode' activates `corfu-mode' in the minibuffer if the
   variable `global-corfu-minibuffer' is non-nil. In order to avoid
@@ -355,10 +354,9 @@ Table of Contents
   to widely used shells like Bash, Zsh or Fish.
 
   ┌────
-  │ (add-hook 'eshell-mode-hook
-  │ 	  (lambda ()
-  │ 	    (setq-local corfu-auto nil)
-  │ 	    (corfu-mode)))
+  │ (add-hook 'eshell-mode-hook (lambda ()
+  │ 			      (setq-local corfu-auto nil)
+  │ 			      (corfu-mode)))
   └────
 
   When pressing `RET' while the Corfu popup is visible, the
@@ -681,12 +679,13 @@ Table of Contents
     completion backends, following its own API, which are incompatible
     with the Emacs completion infrastructure. Company provides an
     adapter `company-capf' to handle Capfs as a Company backend. As a
-    result of this design, Company is a more complex package than
-    Corfu. Company by default uses overlays for the popup in contrast to
-    the child frames used by Corfu. Overall both packages work well, but
-    Company integrates less tightly with Emacs. The `completion-styles'
-    support is more limited and the `completion-at-point' command and
-    the `completion-in-region' function do not invoke Company.
+    result of this design, Company is a more complex package than Corfu,
+    three times as large, even without backends. Company by default uses
+    overlays for the popup in contrast to the child frames used by
+    Corfu. Overall both packages work well, but Company integrates less
+    tightly with Emacs. The `completion-styles' support is more limited
+    and the `completion-at-point' command and the `completion-in-region'
+    function do not invoke Company.
 
   • [consult-completion-in-region]: The Consult package provides the
     function `consult-completion-in-region' which can be set as
@@ -733,6 +732,10 @@ Table of Contents
   ┌────
   │ (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
   └────
+
+  Note that you will sometimes find crashes inside Capfs. Such issues
+  are bugs in the Capfs must be fixed there. They cannot be worked
+  around in Corfu.
 
 
 9 Contributions

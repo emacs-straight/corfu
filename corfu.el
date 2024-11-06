@@ -300,6 +300,9 @@ See also the settings `corfu-auto-delay', `corfu-auto-prefix' and
 (defvar corfu--frame nil
   "Popup frame.")
 
+(defvar corfu--width 0
+  "Popup width of current completion to reduce width fluctuations.")
+
 (defconst corfu--initial-state
   (mapcar
    (lambda (k) (cons k (symbol-value k)))
@@ -313,7 +316,8 @@ See also the settings `corfu-auto-delay', `corfu-auto-prefix' and
      corfu--total
      corfu--preview-ov
      corfu--change-group
-     corfu--metadata))
+     corfu--metadata
+     corfu--width))
   "Initial Corfu state.")
 
 (defvar corfu--frame-parameters
@@ -738,22 +742,22 @@ FRAME is the existing frame."
   (let* ((cw (cl-loop for x in cands maximize (string-width (car x))))
          (pw (cl-loop for x in cands maximize (string-width (cadr x))))
          (sw (cl-loop for x in cands maximize (string-width (caddr x))))
-         (width (+ pw cw sw))
-         ;; -4 because of margins and some additional safety
-         (max-width (min corfu-max-width (- (frame-width) 4))))
-    (setq width (min (max corfu-min-width width) max-width))
+         (width (min (max corfu--width corfu-min-width (+ pw cw sw))
+                     ;; -4 because of margins and some additional safety
+                     corfu-max-width (- (frame-width) 4)))
+         (trunc (not (display-graphic-p))))
+    (setq corfu--width width)
     (list pw width
-          (cl-loop for (cand prefix suffix) in cands collect
-                   (truncate-string-to-width
-                    (concat
-                     prefix (make-string (- pw (string-width prefix)) ?\s)
-                     cand
+          (cl-loop
+           for (cand prefix suffix) in cands collect
+           (let ((s (concat
+                     prefix (make-string (- pw (string-width prefix)) ?\s) cand
                      (when (> sw 0)
                        (make-string (max 0 (- width pw (string-width cand)
                                               (string-width suffix)))
                                     ?\s))
-                     suffix)
-                    width)))))
+                     suffix)))
+             (if trunc (truncate-string-to-width s width) s))))))
 
 (defun corfu--compute-scroll ()
   "Compute new scroll position."
@@ -1017,18 +1021,30 @@ A scroll bar is displayed from LO to LO+BAR."
     (with-current-buffer (corfu--make-buffer " *corfu*")
       (let* ((ch (default-line-height))
              (cw (default-font-width))
+             ;; bug#74214, bug#37755, bug#37689: Even for larger fringes, fringe
+             ;; bitmaps can only have a width between 1 and 16. Therefore we
+             ;; restrict the fringe width to 16 pixel. This restriction may
+             ;; cause problem on HDPi systems.  Hopefully Emacs will adopt
+             ;; larger fringe bitmaps in the future and lift the restriction.
+             (ml (min 16 (ceiling (* cw corfu-left-margin-width))))
+             (mr (min 16 (ceiling (* cw corfu-right-margin-width))))
+             (bw (min mr (ceiling (* cw corfu-bar-width))))
              (fringe (display-graphic-p))
-             (ml (ceiling (* cw corfu-left-margin-width)))
-             (bw (ceiling (* cw corfu-bar-width)))
-             (mr (max bw (ceiling (* cw corfu-right-margin-width))))
-             (marginl (and (> ml 0) (propertize " " 'display `(space :width (,ml)))))
+             (marginl (and (not fringe) (propertize " " 'display `(space :width (,ml)))))
              (sbar (if fringe
-                       #(" " 0 1 (display (right-fringe corfu--bar corfu-bar)))
-                     (concat (propertize " " 'display `(space :align-to (- right (,bw))))
-                             (propertize " " 'face 'corfu-bar 'display `(space :width (,bw))))))
-             (cbar (and fringe #(" " 0 1 (display (right-fringe corfu--bar corfu-current)))))
+                       #(" " 0 1 (display (right-fringe corfu--bar corfu--bar)))
+                     (concat
+                      (propertize " " 'display `(space :align-to (- right (,bw))))
+                      (propertize " " 'face 'corfu-bar 'display `(space :width (,bw))))))
+             (cbar (if fringe
+                       #("  " 0 1 (display (left-fringe corfu--nil corfu-current))
+                         1 2 (display (right-fringe corfu--bar corfu--cbar)))
+                     sbar))
+             (cmargin (and fringe
+                           #("  " 0 1 (display (left-fringe corfu--nil corfu-current))
+                             1 2 (display (right-fringe corfu--nil corfu-current)))))
              (pos (posn-x-y pos))
-             (width (+ (* width cw) ml mr (if fringe (- bw) 0)))
+             (width (+ (* width cw) (if fringe 0 (+ ml mr))))
              ;; XXX HACK: Minimum popup height must be at least 1 line of the
              ;; parent frame (gh:minad/corfu#261).
              (height (max lh (* (length lines) ch)))
@@ -1040,18 +1056,30 @@ A scroll bar is displayed from LO to LO+BAR."
              (y (if (> (+ yb (* corfu-count ch) lh lh) (frame-pixel-height))
                     (- yb height lh border border)
                   yb))
-             (row 0))
-        (setq right-fringe-width (if fringe bw 0))
-        (when (and (> right-fringe-width 0) (not (fringe-bitmap-p 'corfu--bar)))
-          (define-fringe-bitmap 'corfu--bar []))
+             (row 0)
+             (bmp (logxor (1- (ash 1 mr)) (1- (ash 1 bw)))))
+        (setq left-fringe-width (if fringe ml 0) right-fringe-width (if fringe mr 0))
+        ;; Define an inverted corfu--bar face
+        (unless (equal (and (facep 'corfu--bar) (face-attribute 'corfu--bar :foreground))
+                       (face-attribute 'corfu-bar :background))
+          (set-face-attribute (make-face 'corfu--bar) nil
+                              :foreground (face-attribute 'corfu-bar :background)))
+        (unless (or (= right-fringe-width 0) (eq (get 'corfu--bar 'corfu--bmp) bmp))
+          (put 'corfu--bar 'corfu--bmp bmp)
+          (define-fringe-bitmap 'corfu--bar (vector (lognot bmp)) 1 mr '(top periodic))
+          (define-fringe-bitmap 'corfu--nil [])
+          ;; Fringe bitmaps require symbol face specification, define internal face.
+          (set-face-attribute (make-face 'corfu--cbar) nil
+                              :inherit '(corfu--bar corfu-current)))
         (with-silent-modifications
           (erase-buffer)
           (apply #'insert
            (cl-loop for line in lines collect
                     (let ((str (concat
                                 marginl line
-                                (or (and lo (<= lo row (+ lo bar)) sbar)
-                                    (and (eq row curr) cbar))
+                                (if (and lo (<= lo row (+ lo bar)))
+                                    (if (eq row curr) cbar sbar)
+                                  (and (eq row curr) cmargin))
                                 "\n")))
                       (when (eq row curr)
                         (add-face-text-property
@@ -1205,9 +1233,15 @@ there hasn't been any input, then quit."
 
 (defun corfu-insert-separator ()
   "Insert a separator character, inhibiting quit on completion boundary.
-See `corfu-separator' for more details."
+If the currently selected candidate is previewed, jump to the input
+prompt instead.  See `corfu-separator' for more details."
   (interactive)
-  (insert corfu-separator))
+  (if (not (corfu--preview-current-p))
+      (insert corfu-separator)
+    (corfu--goto -1)
+    (unless (or (= (car completion-in-region--data) (point))
+                (= (char-before) corfu-separator))
+      (insert corfu-separator))))
 
 (defun corfu-next (&optional n)
   "Go forward N candidates."

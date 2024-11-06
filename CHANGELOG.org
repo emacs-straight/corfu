@@ -5,10 +5,13 @@
 * Development
 
 - Require Emacs 28.1.
-- Use fringe to display scroll bar. Make sure that the scroll bar cannot be
-  pushed outside the child frame by the content. This affects for example
-  ~cape-emoji~.
+- Use fringe to display scroll bar. This change improves performance and makes
+  sure that the scroll bar cannot be pushed outside the child frame by the
+  content. This affects for example ~cape-emoji~.
 - Improve suffix alignment.
+- Remember popup width during completion to avoid width fluctuations. Basically
+  the popup is only allowed to grow.
+- ~corfu-insert-separator~: Jump back to prompt if a candidate is previewed.
 
 * Version 1.5 (2024-07-26)
 
