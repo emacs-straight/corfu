@@ -38,12 +38,13 @@ Table of Contents
 3. Key bindings
 4. Configuration
 .. 1. Auto completion
-.. 2. Completing in the minibuffer
-.. 3. Completing in the Eshell or Shell
-.. 4. Orderless completion
-.. 5. TAB-only completion
-.. 6. TAB-and-Go completion
-.. 7. Transfer completion to the minibuffer
+.. 2. Buffer-local/Corfu-only completion settings
+.. 3. Completing in the minibuffer
+.. 4. Completing in the Eshell or Shell
+.. 5. Orderless completion
+.. 6. TAB-only completion
+.. 7. TAB-and-Go completion
+.. 8. Transfer completion to the minibuffer
 5. Extensions
 6. Complementary packages
 7. Alternatives
@@ -314,7 +315,26 @@ Table of Contents
   └────
 
 
-4.2 Completing in the minibuffer
+4.2 Buffer-local/Corfu-only completion settings
+───────────────────────────────────────────────
+
+  Sometimes it makes sense to use separate completion style settings for
+  minibuffer completion and in-buffer Corfu completion. For example
+  inside the minibuffer you may prefer Orderless completion, while for
+  Corfu prefix completion is sufficient. Such a configuration is
+  possible by setting the `completion-styles' variables buffer-locally,
+  as follows:
+
+  ┌────
+  │ (add-hook 'corfu-mode-hook
+  │ 	  (lambda ()
+  │ 	    (setq-local completion-styles '(basic)
+  │ 			completion-category-overrides nil
+  │ 			completion-category-defaults nil)))
+  └────
+
+
+4.3 Completing in the minibuffer
 ────────────────────────────────
 
   Corfu can be used for completion in the minibuffer, since it relies on
@@ -346,7 +366,7 @@ Table of Contents
   └────
 
 
-4.3 Completing in the Eshell or Shell
+4.4 Completing in the Eshell or Shell
 ─────────────────────────────────────
 
   When completing in the Eshell I recommend conservative local settings
@@ -400,7 +420,7 @@ Table of Contents
 [Cape] <https://github.com/minad/cape>
 
 
-4.4 Orderless completion
+4.5 Orderless completion
 ────────────────────────
 
   [Orderless] is an advanced completion style that supports
@@ -469,7 +489,7 @@ Table of Contents
 [Orderless] <https://github.com/oantolin/orderless>
 
 
-4.5 TAB-only completion
+4.6 TAB-only completion
 ───────────────────────
 
   By default, Corfu steals both the `RET' and `TAB' keys, when the Corfu
@@ -501,7 +521,7 @@ Table of Contents
   └────
 
 
-4.6 TAB-and-Go completion
+4.7 TAB-and-Go completion
 ─────────────────────────
 
   You may be interested in configuring Corfu in TAB-and-Go
@@ -531,7 +551,7 @@ Table of Contents
   └────
 
 
-4.7 Transfer completion to the minibuffer
+4.8 Transfer completion to the minibuffer
 ─────────────────────────────────────────
 
   Sometimes it is useful to transfer the Corfu completion session to the
