@@ -1,4 +1,4 @@
-This is docfFQBYi.info, produced by makeinfo version 6.8 from
+This is doc2XwXOo.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docfFQBYi.info,  Node: Top,  Next: Features,  Up: (dir)
+File: doc2XwXOo.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -59,7 +59,7 @@ overlays.
 Configuration
 
 * Auto completion::
-* Buffer-local/Corfu-only completion settings::
+* Buffer-local/Corfu-only completion styles::
 * Completing in the minibuffer::
 * Completing in the Eshell or Shell::
 * Orderless completion::
@@ -69,7 +69,7 @@ Configuration
 
 
 
-File: docfFQBYi.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: doc2XwXOo.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -99,7 +99,7 @@ File: docfFQBYi.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docfFQBYi.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: doc2XwXOo.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -112,7 +112,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: docfFQBYi.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: doc2XwXOo.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -141,7 +141,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docfFQBYi.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: doc2XwXOo.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -252,7 +252,7 @@ completion in the Elisp manual
 * Menu:
 
 * Auto completion::
-* Buffer-local/Corfu-only completion settings::
+* Buffer-local/Corfu-only completion styles::
 * Completing in the minibuffer::
 * Completing in the Eshell or Shell::
 * Orderless completion::
@@ -261,7 +261,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docfFQBYi.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion settings,  Up: Configuration
+File: doc2XwXOo.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -283,23 +283,59 @@ arrow keys.
 
    In case you like auto completion settings, where the completion popup
 appears immediately, better use a cheap completion style like ‘basic’,
-which performs prefix filtering.  In this case Corfu completion should
+which performs prefix filtering.  See the next section about setting
+Corfu-only completion styles.  In this case Corfu completion should
 still be fast in buffers with efficient completion backends.  You can
 try the following settings in an Elisp buffer or the Emacs scratch
 buffer.  Note that such settings can slow down Emacs due to the high
 load on the Lisp runtime and garbage collector.
 
-     (setq-local corfu-auto        t
-                 corfu-auto-delay  0 ;; TOO SMALL - NOT RECOMMENDED
-                 corfu-auto-prefix 1 ;; TOO SMALL - NOT RECOMMENDED
-                 completion-styles '(basic))
+     (setq corfu-auto        t
+           corfu-auto-delay  0  ;; TOO SMALL - NOT RECOMMENDED!
+           corfu-auto-prefix 1) ;; TOO SMALL - NOT RECOMMENDED!
+
+     (add-hook 'corfu-mode-hook
+               (lambda ()
+                 ;; Settings only for Corfu
+                 (setq-local completion-styles '(basic)
+                             completion-category-overrides nil
+                             completion-category-defaults nil)))
+
+
+File: doc2XwXOo.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+
+4.2 Buffer-local/Corfu-only completion styles
+=============================================
+
+Sometimes it makes sense to use separate completion style settings for
+minibuffer completion and in-buffer Corfu completion.  For example
+inside the minibuffer you may prefer advanced Orderless completion,
+while for Corfu, faster prefix completion is needed or literal-only
+completion is sufficient.
+
+   This matters in particular if you use aggressive auto completion
+settings, where the completion popup appears immediately.  Then a cheap
+completion style like ‘basic’ should be used, which performs prefix
+filtering only.
+
+   Such Corfu-only configurations are possible by setting the
+‘completion-styles’ variables buffer-locally, as follows:
+
+     (orderless-define-completion-style orderless-literal-only
+       (orderless-style-dispatchers nil)
+       (orderless-matching-styles '(orderless-literal)))
+
+     (add-hook 'corfu-mode-hook
+               (lambda ()
+                 (setq-local completion-styles '(orderless-literal-only basic)
+                             completion-category-overrides nil
+                             completion-category-defaults nil)))
 
    If you want to combine fast prefix filtering and Orderless filtering
 you can still do that by defining a custom Orderless completion style
 via ‘orderless-define-completion-style’.  We use a custom style
 dispatcher, which enables efficient prefix filtering for input shorter
-than 4 characters.  Note that such a setup is advanced.  Please refer to
-the Orderless documentation and source code for further details.
+than 4 characters.
 
      (defun orderless-fast-dispatch (word index total)
        (and (= index 0) (= total 1) (length< word 4)
@@ -309,31 +345,18 @@ the Orderless documentation and source code for further details.
        (orderless-style-dispatchers '(orderless-fast-dispatch))
        (orderless-matching-styles '(orderless-literal orderless-regexp)))
 
-     (setq-local corfu-auto        t
-                 corfu-auto-delay  0 ;; TOO SMALL - NOT RECOMMENDED
-                 corfu-auto-prefix 1 ;; TOO SMALL - NOT RECOMMENDED
-                 completion-styles '(orderless-fast basic))
-
-
-File: docfFQBYi.info,  Node: Buffer-local/Corfu-only completion settings,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
-
-4.2 Buffer-local/Corfu-only completion settings
-===============================================
-
-Sometimes it makes sense to use separate completion style settings for
-minibuffer completion and in-buffer Corfu completion.  For example
-inside the minibuffer you may prefer Orderless completion, while for
-Corfu prefix completion is sufficient.  Such a configuration is possible
-by setting the ‘completion-styles’ variables buffer-locally, as follows:
+     (setq corfu-auto        t
+           corfu-auto-delay  0  ;; TOO SMALL - NOT RECOMMENDED
+           corfu-auto-prefix 1) ;; TOO SMALL - NOT RECOMMENDED
 
      (add-hook 'corfu-mode-hook
                (lambda ()
-                 (setq-local completion-styles '(basic)
+                 (setq-local completion-styles '(orderless-fast basic)
                              completion-category-overrides nil
                              completion-category-defaults nil)))
 
 
-File: docfFQBYi.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion settings,  Up: Configuration
+File: doc2XwXOo.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -365,7 +388,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docfFQBYi.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: doc2XwXOo.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -411,7 +434,7 @@ any remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docfFQBYi.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: doc2XwXOo.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -477,7 +500,7 @@ components.
        (global-corfu-mode))
 
 
-File: docfFQBYi.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: doc2XwXOo.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -509,7 +532,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docfFQBYi.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: doc2XwXOo.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -539,7 +562,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docfFQBYi.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: doc2XwXOo.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -569,7 +592,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docfFQBYi.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: doc2XwXOo.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -609,7 +632,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docfFQBYi.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: doc2XwXOo.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -656,7 +679,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docfFQBYi.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: doc2XwXOo.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -689,7 +712,7 @@ File: docfFQBYi.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docfFQBYi.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: doc2XwXOo.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -721,7 +744,7 @@ are bugs in the Capfs must be fixed there.  They cannot be worked around
 in Corfu.
 
 
-File: docfFQBYi.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: doc2XwXOo.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -734,23 +757,23 @@ copyright assignment to the FSF.
 
 Tag Table:
 Node: Top208
-Node: Features2570
-Node: Installation4033
-Node: Key bindings4548
-Node: Configuration5887
-Node: Auto completion11378
-Node: Buffer-local/Corfu-only completion settings13915
-Node: Completing in the minibuffer14770
-Node: Completing in the Eshell or Shell16327
-Node: Orderless completion18692
-Node: TAB-only completion21769
-Node: TAB-and-Go completion23142
-Node: Transfer completion to the minibuffer24236
-Node: Extensions25661
-Node: Complementary packages27462
-Node: Alternatives29720
-Node: Debugging Corfu31512
-Node: Contributions32724
+Node: Features2568
+Node: Installation4031
+Node: Key bindings4546
+Node: Configuration5885
+Node: Auto completion11374
+Node: Buffer-local/Corfu-only completion styles13194
+Node: Completing in the minibuffer15597
+Node: Completing in the Eshell or Shell17152
+Node: Orderless completion19517
+Node: TAB-only completion22594
+Node: TAB-and-Go completion23967
+Node: Transfer completion to the minibuffer25061
+Node: Extensions26486
+Node: Complementary packages28287
+Node: Alternatives30545
+Node: Debugging Corfu32337
+Node: Contributions33549
 
 End Tag Table
 
