@@ -1,4 +1,4 @@
-This is doc2XwXOo.info, produced by makeinfo version 6.8 from
+This is docPfVViG.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: doc2XwXOo.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docPfVViG.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -69,7 +69,7 @@ Configuration
 
 
 
-File: doc2XwXOo.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docPfVViG.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -99,7 +99,7 @@ File: doc2XwXOo.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: doc2XwXOo.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docPfVViG.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -112,7 +112,7 @@ variable ‘corfu-auto’ to t in order to enable auto completion.  For
 manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
 
 
-File: doc2XwXOo.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docPfVViG.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -141,7 +141,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: doc2XwXOo.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docPfVViG.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -261,7 +261,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: doc2XwXOo.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docPfVViG.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -292,7 +292,7 @@ load on the Lisp runtime and garbage collector.
 
      (setq corfu-auto        t
            corfu-auto-delay  0  ;; TOO SMALL - NOT RECOMMENDED!
-           corfu-auto-prefix 1) ;; TOO SMALL - NOT RECOMMENDED!
+           corfu-auto-prefix 0) ;; TOO SMALL - NOT RECOMMENDED!
 
      (add-hook 'corfu-mode-hook
                (lambda ()
@@ -302,7 +302,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: doc2XwXOo.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: docPfVViG.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -347,7 +347,7 @@ than 4 characters.
 
      (setq corfu-auto        t
            corfu-auto-delay  0  ;; TOO SMALL - NOT RECOMMENDED
-           corfu-auto-prefix 1) ;; TOO SMALL - NOT RECOMMENDED
+           corfu-auto-prefix 0) ;; TOO SMALL - NOT RECOMMENDED
 
      (add-hook 'corfu-mode-hook
                (lambda ()
@@ -356,7 +356,7 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: doc2XwXOo.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docPfVViG.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -388,7 +388,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: doc2XwXOo.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docPfVViG.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -434,7 +434,7 @@ any remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: doc2XwXOo.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docPfVViG.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -500,7 +500,7 @@ components.
        (global-corfu-mode))
 
 
-File: doc2XwXOo.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docPfVViG.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -532,7 +532,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: doc2XwXOo.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: docPfVViG.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -562,7 +562,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: doc2XwXOo.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docPfVViG.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -592,7 +592,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: doc2XwXOo.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docPfVViG.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -632,7 +632,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: doc2XwXOo.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docPfVViG.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -679,7 +679,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: doc2XwXOo.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docPfVViG.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -712,7 +712,7 @@ File: doc2XwXOo.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: doc2XwXOo.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docPfVViG.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -744,7 +744,7 @@ are bugs in the Capfs must be fixed there.  They cannot be worked around
 in Corfu.
 
 
-File: doc2XwXOo.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docPfVViG.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
