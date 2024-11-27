@@ -81,8 +81,7 @@ The value should lie between 0 and corfu-count/2."
   :type '(choice (const insert) (const show) (const quit) (const nil)))
 
 (defcustom corfu-continue-commands
-  ;; nil is undefined command
-  '(nil ignore universal-argument universal-argument-more digit-argument
+  '(ignore universal-argument universal-argument-more digit-argument
     "\\`corfu-" "\\`scroll-other-window")
   "Continue Corfu completion after executing these commands.
 The list can container either command symbols or regular expressions."
@@ -830,12 +829,19 @@ the last command must be listed in `corfu-continue-commands'."
 (defun corfu--preview-current (beg end)
   "Show current candidate as overlay given BEG and END."
   (when (corfu--preview-current-p)
+    (corfu--preview-delete)
     (setq beg (+ beg (length corfu--base))
           corfu--preview-ov (make-overlay beg end nil))
     (overlay-put corfu--preview-ov 'priority 1000)
     (overlay-put corfu--preview-ov 'window (selected-window))
     (overlay-put corfu--preview-ov (if (= beg end) 'after-string 'display)
                  (nth corfu--index corfu--candidates))))
+
+(defun corfu--preview-delete ()
+  "Delete the preview overlay."
+  (when corfu--preview-ov
+    (delete-overlay corfu--preview-ov)
+    (setq corfu--preview-ov nil)))
 
 (defun corfu--window-change (_)
   "Window and buffer change hook which quits Corfu."
@@ -993,20 +999,20 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
 (defun corfu--auto-post-command ()
   "Post command hook which initiates auto completion."
   (cancel-timer corfu--auto-timer)
-  (if (and (not completion-in-region-mode)
-           (not defining-kbd-macro)
-           (not buffer-read-only)
-           (corfu--match-symbol-p corfu-auto-commands this-command)
-           (corfu--popup-support-p))
-      (if (<= corfu-auto-delay 0)
-          (corfu--auto-complete-deferred)
-        ;; Do not use `timer-set-idle-time' since this leads to
-        ;; unpredictable pauses, in particular with `flyspell-mode'.
-        (timer-set-time corfu--auto-timer
-                        (timer-relative-time nil corfu-auto-delay))
-        (timer-set-function corfu--auto-timer #'corfu--auto-complete-deferred
-                            (list (corfu--auto-tick)))
-        (timer-activate corfu--auto-timer))))
+  (when (and (not completion-in-region-mode)
+             (not defining-kbd-macro)
+             (not buffer-read-only)
+             (corfu--match-symbol-p corfu-auto-commands this-command)
+             (corfu--popup-support-p))
+    (if (<= corfu-auto-delay 0)
+        (corfu--auto-complete-deferred)
+      ;; Do not use `timer-set-idle-time' since this leads to
+      ;; unpredictable pauses, in particular with `flyspell-mode'.
+      (timer-set-time corfu--auto-timer
+                      (timer-relative-time nil corfu-auto-delay))
+      (timer-set-function corfu--auto-timer #'corfu--auto-complete-deferred
+                          (list (corfu--auto-tick)))
+      (timer-activate corfu--auto-timer))))
 
 (defun corfu--auto-tick ()
   "Return the current tick/status of the buffer.
@@ -1142,9 +1148,7 @@ A scroll bar is displayed from LO to LO+BAR."
 
 (cl-defgeneric corfu--prepare ()
   "Insert selected candidate unless command is marked to continue completion."
-  (when corfu--preview-ov
-    (delete-overlay corfu--preview-ov)
-    (setq corfu--preview-ov nil))
+  (corfu--preview-delete)
   ;; Ensure that state is initialized before next Corfu command
   (when (and (symbolp this-command) (string-prefix-p "corfu-" (symbol-name this-command)))
     (corfu--update))
@@ -1191,7 +1195,7 @@ AUTO is non-nil when initializing auto completion."
 (cl-defgeneric corfu--teardown (buffer)
   "Tear-down Corfu in BUFFER, which might be dead at this point."
   (corfu--popup-hide)
-  (when corfu--preview-ov (delete-overlay corfu--preview-ov))
+  (corfu--preview-delete)
   (remove-hook 'post-command-hook #'corfu--post-command)
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
