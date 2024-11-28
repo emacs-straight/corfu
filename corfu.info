@@ -1,4 +1,4 @@
-This is docZTuWxk.info, produced by makeinfo version 6.8 from
+This is doczxVYj5.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docZTuWxk.info,  Node: Top,  Next: Features,  Up: (dir)
+File: doczxVYj5.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -69,12 +69,12 @@ Configuration
 
 
 
-File: docZTuWxk.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: doczxVYj5.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
 
-   • Timer-based auto-completions (_off_ by default, set ‘corfu-auto’).
+   • Timer-based auto-completions (_off_ by default).
    • Popup display with scrollbar indicator and arrow key navigation.
    • The popup can be summoned explicitly by pressing ‘TAB’ at any time.
    • The current candidate is inserted with ‘TAB’ and selected with
@@ -99,7 +99,7 @@ File: docZTuWxk.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docZTuWxk.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: doczxVYj5.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -107,12 +107,12 @@ File: docZTuWxk.info,  Node: Installation,  Next: Key bindings,  Prev: Features,
 Corfu is available from GNU ELPA
 (https://elpa.gnu.org/packages/corfu.html).  You can install it directly
 via ‘M-x package-install RET corfu RET’.  After installation, activate
-the global minor mode with ‘M-x global-corfu-mode RET’.  Set the
-variable ‘corfu-auto’ to t in order to enable auto completion.  For
-manual completion press ‘M-TAB’ (or ‘TAB’) within a buffer.
+the global minor mode with ‘M-x global-corfu-mode RET’.  For completion
+press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
+by default for safety and unobtrusiveness.
 
 
-File: docZTuWxk.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: doczxVYj5.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -141,7 +141,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docZTuWxk.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: doczxVYj5.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -152,8 +152,14 @@ customization variables, such that you can adapt it precisely to your
 requirements.  However in order to quickly try out the Corfu completion
 package, it should be sufficient to activate ‘global-corfu-mode’.  You
 can experiment with manual completion for example in an Elisp buffer or
-in an Eshell or Shell buffer.  For auto completion, set ‘corfu-auto’ to
-t before turning on ‘global-corfu-mode’.
+in an Eshell or Shell buffer.
+
+   Auto completion is disabled by default in Corfu.  Note that
+completion can be vulnerable to arbitrary code execution in untrusted
+files.  In particular the ‘elisp-completion-at-point’ completion
+function performs macro expansion and code evaluation.  Auto completion
+can be enabled by setting ‘corfu-auto’ to t locally or globally before
+enabling the local ‘corfu-mode’ or the ‘global-corfu-mode’.
 
    Here is an example configuration:
 
@@ -161,7 +167,6 @@ t before turning on ‘global-corfu-mode’.
        ;; Optional customizations
        ;; :custom
        ;; (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
-       ;; (corfu-auto t)                 ;; Enable auto completion
        ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
        ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
        ;; (corfu-preview-current nil)    ;; Disable current candidate preview
@@ -261,15 +266,20 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docZTuWxk.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: doczxVYj5.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
 
-Auto completion is disabled by default, but can be enabled by setting
-‘corfu-auto’ to t.  Furthermore you may want to configure Corfu to quit
-completion eagerly, such that the completion popup stays out of your way
-when it appeared unexpectedly.
+Auto completion is disabled by default for safety and unobtrusiveness.
+Note that completion can be vulnerable to arbitrary code execution.
+Auto completion can be enabled by setting ‘corfu-auto’ to t.  Only
+enable auto completion locally in trusted buffers or globally if you
+edit trusted files only.
+
+   You may want to configure Corfu to quit completion eagerly, such that
+the completion popup stays out of your way when it appeared
+unexpectedly.
 
      ;; Enable auto completion and configure quitting
      (setq corfu-auto t
@@ -302,7 +312,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: docZTuWxk.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: doczxVYj5.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -356,7 +366,7 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: docZTuWxk.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: doczxVYj5.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -388,7 +398,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docZTuWxk.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: doczxVYj5.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -434,7 +444,7 @@ any remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docZTuWxk.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: doczxVYj5.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -500,7 +510,7 @@ components.
        (global-corfu-mode))
 
 
-File: docZTuWxk.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: doczxVYj5.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -532,7 +542,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docZTuWxk.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: doczxVYj5.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -562,7 +572,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docZTuWxk.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: doczxVYj5.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -592,7 +602,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docZTuWxk.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: doczxVYj5.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -632,7 +642,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docZTuWxk.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: doczxVYj5.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -679,7 +689,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docZTuWxk.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: doczxVYj5.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -712,7 +722,7 @@ File: docZTuWxk.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docZTuWxk.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: doczxVYj5.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -744,7 +754,7 @@ are bugs in the Capfs must be fixed there.  They cannot be worked around
 in Corfu.
 
 
-File: docZTuWxk.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: doczxVYj5.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -758,22 +768,22 @@ copyright assignment to the FSF.
 Tag Table:
 Node: Top208
 Node: Features2568
-Node: Installation4031
-Node: Key bindings4546
-Node: Configuration5885
-Node: Auto completion11374
-Node: Buffer-local/Corfu-only completion styles13194
-Node: Completing in the minibuffer15597
-Node: Completing in the Eshell or Shell17152
-Node: Orderless completion19517
-Node: TAB-only completion22594
-Node: TAB-and-Go completion23967
-Node: Transfer completion to the minibuffer25061
-Node: Extensions26486
-Node: Complementary packages28287
-Node: Alternatives30545
-Node: Debugging Corfu32337
-Node: Contributions33549
+Node: Installation4009
+Node: Key bindings4513
+Node: Configuration5852
+Node: Auto completion11601
+Node: Buffer-local/Corfu-only completion styles13623
+Node: Completing in the minibuffer16026
+Node: Completing in the Eshell or Shell17581
+Node: Orderless completion19946
+Node: TAB-only completion23023
+Node: TAB-and-Go completion24396
+Node: Transfer completion to the minibuffer25490
+Node: Extensions26915
+Node: Complementary packages28716
+Node: Alternatives30974
+Node: Debugging Corfu32766
+Node: Contributions33978
 
 End Tag Table
 
