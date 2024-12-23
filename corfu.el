@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Version: 1.5
+;; Version: 1.6
 ;; Package-Requires: ((emacs "28.1") (compat "30"))
 ;; URL: https://github.com/minad/corfu
 ;; Keywords: abbrev, convenience, matching, completion, text
@@ -945,17 +945,15 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
               (total (alist-get 'corfu--total state))
               (cands (alist-get 'corfu--candidates state)))
          (cond
-          ((= total 0)
-           ;; No candidates found for `newstr' -> Completion is finished.
-           (corfu--exit-function newstr 'finished nil))
-          ((= total 1)
+          ((<= total 1)
            ;; If completion is finished and cannot be extended further and
            ;; `corfu-on-exact-match' is not 'show, return 'finished.  Otherwise
            ;; setup the popup.
-           (if (or (eq corfu-on-exact-match 'show)
-                   (consp (completion-try-completion
-                           newstr table pred newpt
-                           (completion-metadata newstr table pred))))
+           (if (and (= total 1)
+                    (or (eq corfu-on-exact-match 'show)
+                        (consp (completion-try-completion
+                                newstr table pred newpt
+                                (completion-metadata newstr table pred)))))
                (corfu--setup beg end table pred)
              (corfu--exit-function newstr 'finished cands)))
           ;; Too many candidates for cycling -> Setup popup.
@@ -1107,9 +1105,7 @@ A scroll bar is displayed from LO to LO+BAR."
 
 (cl-defgeneric corfu--popup-support-p ()
   "Return non-nil if child frames are supported."
-  (or (display-graphic-p)
-      ;; Upcoming feature: Gerd Möllmann's child frame support on TTY.
-      (featurep 'tty-child-frames)))
+  (or (display-graphic-p) (featurep 'tty-child-frames)))
 
 (cl-defgeneric corfu--insert (status)
   "Insert current candidate, exit with STATUS if non-nil."
