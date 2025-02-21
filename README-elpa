@@ -683,8 +683,9 @@ Table of Contents
 
   • [kind-icon], [nerd-icons-corfu]: Icons are supported by Corfu via
     external packages. The nerd-icons-corfu package relies on the Nerd
-    icon font, which is even supported on terminal, while kind-icon uses
-    SVGs from monochromatic icon sets.
+    icon font, which is supported on terminal, while kind-icon uses SVGs
+    from monochromatic icon sets, or colored-coded text badges for
+    terminal or simpler appearance.
 
   • [Tempel]: Tiny template/snippet package with templates in Lisp
     syntax, which can be used in conjunction with Corfu.

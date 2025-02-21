@@ -1,4 +1,4 @@
-This is doc9MFflu.info, produced by makeinfo version 6.8 from
+This is doc3rnjvS.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: doc9MFflu.info,  Node: Top,  Next: Features,  Up: (dir)
+File: doc3rnjvS.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -63,7 +63,7 @@ Configuration
 
 
 
-File: doc9MFflu.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: doc3rnjvS.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -93,7 +93,7 @@ File: doc9MFflu.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: doc9MFflu.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: doc3rnjvS.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -106,7 +106,7 @@ press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
 by default for safety and unobtrusiveness.
 
 
-File: doc9MFflu.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: doc3rnjvS.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -135,7 +135,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: doc9MFflu.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: doc3rnjvS.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -260,7 +260,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: doc9MFflu.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: doc3rnjvS.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -306,7 +306,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: doc9MFflu.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: doc3rnjvS.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -360,7 +360,7 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: doc9MFflu.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: doc3rnjvS.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -392,7 +392,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: doc9MFflu.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: doc3rnjvS.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -437,7 +437,7 @@ remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: doc9MFflu.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: doc3rnjvS.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -503,7 +503,7 @@ components.
        (global-corfu-mode))
 
 
-File: doc9MFflu.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: doc3rnjvS.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -535,7 +535,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: doc9MFflu.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: doc3rnjvS.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -565,7 +565,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: doc9MFflu.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: doc3rnjvS.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -595,7 +595,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: doc9MFflu.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: doc3rnjvS.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -635,7 +635,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: doc9MFflu.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: doc3rnjvS.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -670,8 +670,9 @@ look into complementary packages to enhance your setup.
    • kind-icon (https://github.com/jdtsmith/kind-icon), nerd-icons-corfu
      (https://github.com/LuigiPiucco/nerd-icons-corfu): Icons are
      supported by Corfu via external packages.  The nerd-icons-corfu
-     package relies on the Nerd icon font, which is even supported on
-     terminal, while kind-icon uses SVGs from monochromatic icon sets.
+     package relies on the Nerd icon font, which is supported on
+     terminal, while kind-icon uses SVGs from monochromatic icon sets,
+     or colored-coded text badges for terminal or simpler appearance.
 
    • Tempel (https://github.com/minad/tempel): Tiny template/snippet
      package with templates in Lisp syntax, which can be used in
@@ -682,7 +683,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: doc9MFflu.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: doc3rnjvS.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -715,7 +716,7 @@ File: doc9MFflu.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: doc9MFflu.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: doc3rnjvS.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -747,7 +748,7 @@ are bugs in the Capfs must be fixed there.  They cannot be worked around
 in Corfu.
 
 
-File: doc9MFflu.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: doc3rnjvS.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -774,9 +775,9 @@ Node: TAB-and-Go completion23984
 Node: Transfer completion to the minibuffer25078
 Node: Extensions26503
 Node: Complementary packages28304
-Node: Alternatives30564
-Node: Debugging Corfu32356
-Node: Contributions33568
+Node: Alternatives30629
+Node: Debugging Corfu32421
+Node: Contributions33633
 
 End Tag Table
 
