@@ -2,6 +2,14 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Development
+
+- =corfu-history-duplicate= and =corfu-history-decay=: New customization options to
+  adjust the rank of duplicate history elements, such that they appear earlier
+  in the completion list.
+- =corfu-history-mode=: Add =corfu-history= to =savehist-minibuffer-history-variables=
+  in order to save the history if =savehist-mode= is enabled.
+
 * Version 2.0 (2025-03-28)
 
 - ~corfu-quick~: Ensure that popup does not move.

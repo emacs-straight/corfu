@@ -26,14 +26,14 @@
 
 ;;; Commentary:
 
-;; Enable `corfu-history-mode' to sort candidates by their history
-;; position.  Maintain a list of recently selected candidates.  In order
-;; to save the history across Emacs sessions, enable `savehist-mode' and
-;; add `corfu-history' to `savehist-additional-variables'.
+;; Enable `corfu-history-mode' to sort candidates by their history position.
+;; The recently selected candidates are stored in the `corfu-history' variable.
+;; If `history-delete-duplicates' is nil, duplicate elements are ranked higher
+;; with exponential decay.  In order to save the history across Emacs sessions,
+;; enable `savehist-mode'.
 ;;
-;; (corfu-history-mode 1)
-;; (savehist-mode 1)
-;; (add-to-list 'savehist-additional-variables 'corfu-history)
+;; (corfu-history-mode)
+;; (savehist-mode)
 
 ;;; Code:
 
@@ -49,6 +49,22 @@ or the property `history-length' of `corfu-history'.")
 (defvar corfu-history--hash nil
   "Hash table of Corfu candidates.")
 
+(defcustom corfu-history-duplicate 10
+  "History position shift for duplicate history elements.
+The more often a duplicate element occurs in the history, the earlier it
+appears in the completion list.  The shift decays exponentially with
+`corfu-history-decay'.  Note that duplicates occur only if
+`history-delete-duplicates' is disabled."
+  :type 'number
+  :group 'corfu)
+
+(defcustom corfu-history-decay 10
+  "Exponential decay for the position shift of duplicate elements.
+The shift will decay away after `corfu-history-duplicate' times
+`corfu-history-decay' history elements."
+  :type 'number
+  :group 'corfu)
+
 (defun corfu-history--sort-predicate (x y)
   "Sorting predicate which compares X and Y."
   (or (< (cdr x) (cdr y))
@@ -58,17 +74,19 @@ or the property `history-length' of `corfu-history'.")
 (defun corfu-history--sort (cands)
   "Sort CANDS by history."
   (unless corfu-history--hash
-    (setq corfu-history--hash (make-hash-table :test #'equal :size (length corfu-history)))
-    (cl-loop for elem in corfu-history for index from 0 do
-             (unless (gethash elem corfu-history--hash)
-               (puthash elem index corfu-history--hash))))
-  ;; Decorate each candidate with (index<<13) + length. This way we sort first by index and then by
-  ;; length. We assume that the candidates are shorter than 2**13 characters and that the history is
-  ;; shorter than 2**16 entries.
-  (cl-loop for cand on cands do
-           (setcar cand (cons (car cand)
-                              (+ (ash (gethash (car cand) corfu-history--hash #xFFFF) 13)
-                                 (length (car cand))))))
+    (let ((ht (make-hash-table :test #'equal :size (length corfu-history)))
+          (decay (/ -1.0 (* corfu-history-duplicate corfu-history-decay))))
+      (cl-loop for elem in corfu-history for idx from 0
+               for r = (if-let ((r (gethash elem ht)))
+                           ;; Reduce duplicate rank with exponential decay.
+                           (- r (round (* corfu-history-duplicate (exp (* decay idx)))))
+                         ;; Never outrank the most recent element.
+                         (if (= idx 0) (/ most-negative-fixnum 2) idx))
+               do (puthash elem r ht))
+      (setq corfu-history--hash ht)))
+  (cl-loop for ht = corfu-history--hash for max = most-positive-fixnum
+           for cand on cands do
+           (setcar cand (cons (car cand) (gethash (car cand) ht max))))
   (setq cands (sort cands #'corfu-history--sort-predicate))
   (cl-loop for cand on cands do (setcar cand (caar cand)))
   cands)
@@ -83,6 +101,10 @@ or the property `history-length' of `corfu-history'.")
 
 (cl-defmethod corfu--insert :before (_status &context (corfu-history-mode (eql t)))
   (when (>= corfu--index 0)
+    (unless (or (not (bound-and-true-p savehist-mode))
+                (memq 'corfu-history (bound-and-true-p savehist-ignored-variables)))
+      (defvar savehist-minibuffer-history-variables)
+      (add-to-list 'savehist-minibuffer-history-variables 'corfu-history))
     (add-to-history 'corfu-history
                     (substring-no-properties
                      (nth corfu--index corfu--candidates)))

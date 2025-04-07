@@ -1,4 +1,4 @@
-This is docG5mjdB.info, produced by makeinfo version 6.8 from
+This is docOh7nxp.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docG5mjdB.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docOh7nxp.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -63,7 +63,7 @@ Configuration
 
 
 
-File: docG5mjdB.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docOh7nxp.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -93,7 +93,7 @@ File: docG5mjdB.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docG5mjdB.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docOh7nxp.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -106,7 +106,7 @@ press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
 by default for safety and unobtrusiveness.
 
 
-File: docG5mjdB.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docOh7nxp.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -135,7 +135,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docG5mjdB.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docOh7nxp.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -172,11 +172,17 @@ enabling the local ‘corfu-mode’ or the ‘global-corfu-mode’.
        ;;        (shell-mode . corfu-mode)
        ;;        (eshell-mode . corfu-mode))
 
-       ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
-       ;; be used globally (M-/).  See also the customization variable
-       ;; `global-corfu-modes' to exclude certain modes.
        :init
-       (global-corfu-mode))
+
+       ;; Recommended: Enable Corfu globally.  Recommended since many modes provide
+       ;; Capfs and Dabbrev can be used globally (M-/).  See also the customization
+       ;; variable `global-corfu-modes' to exclude certain modes.
+       (global-corfu-mode)
+
+       ;; Enable optional extension modes:
+       ;; (corfu-history-mode)
+       ;; (corfu-popupinfo-mode)
+       )
 
      ;; A few more useful configurations...
      (use-package emacs
@@ -260,7 +266,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docG5mjdB.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docOh7nxp.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -306,7 +312,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: docG5mjdB.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: docOh7nxp.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -360,7 +366,7 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: docG5mjdB.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docOh7nxp.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -392,7 +398,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docG5mjdB.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docOh7nxp.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -437,7 +443,7 @@ remaining Pcomplete issues, please report them upstream.
        (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
 
 
-File: docG5mjdB.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docOh7nxp.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -503,7 +509,7 @@ components.
        (global-corfu-mode))
 
 
-File: docG5mjdB.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docOh7nxp.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -535,7 +541,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docG5mjdB.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: docOh7nxp.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -565,7 +571,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docG5mjdB.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docOh7nxp.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -595,7 +601,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docG5mjdB.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docOh7nxp.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -616,7 +622,7 @@ the following extensions come with the Corfu ELPA package:
    • corfu-history
      (https://github.com/minad/corfu/blob/main/extensions/corfu-history.el):
      ‘corfu-history-mode’ remembers selected candidates and sorts the
-     candidates by their history position.
+     candidates by their history position and frequency.
    • corfu-indexed
      (https://github.com/minad/corfu/blob/main/extensions/corfu-indexed.el):
      ‘corfu-indexed-mode’ allows you to select indexed candidates with
@@ -635,7 +641,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docG5mjdB.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docOh7nxp.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -683,7 +689,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docG5mjdB.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docOh7nxp.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -716,7 +722,7 @@ File: docG5mjdB.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docG5mjdB.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docOh7nxp.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -748,7 +754,7 @@ are bugs in the Capfs must be fixed there.  They cannot be worked around
 in Corfu.
 
 
-File: docG5mjdB.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docOh7nxp.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -765,19 +771,19 @@ Node: Features2186
 Node: Installation3627
 Node: Key bindings4131
 Node: Configuration5470
-Node: Auto completion11219
-Node: Buffer-local/Corfu-only completion styles13241
-Node: Completing in the minibuffer15644
-Node: Completing in the Eshell or Shell17199
-Node: Orderless completion19534
-Node: TAB-only completion22611
-Node: TAB-and-Go completion23984
-Node: Transfer completion to the minibuffer25078
-Node: Extensions26503
-Node: Complementary packages28304
-Node: Alternatives30629
-Node: Debugging Corfu32421
-Node: Contributions33633
+Node: Auto completion11357
+Node: Buffer-local/Corfu-only completion styles13379
+Node: Completing in the minibuffer15782
+Node: Completing in the Eshell or Shell17337
+Node: Orderless completion19672
+Node: TAB-only completion22749
+Node: TAB-and-Go completion24122
+Node: Transfer completion to the minibuffer25216
+Node: Extensions26641
+Node: Complementary packages28456
+Node: Alternatives30781
+Node: Debugging Corfu32573
+Node: Contributions33785
 
 End Tag Table
 
