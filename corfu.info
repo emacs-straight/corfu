@@ -1,4 +1,4 @@
-This is docFVITAX.info, produced by makeinfo version 6.8 from
+This is doctWSF1C.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docFVITAX.info,  Node: Top,  Next: Features,  Up: (dir)
+File: doctWSF1C.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -63,7 +63,7 @@ Configuration
 
 
 
-File: docFVITAX.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: doctWSF1C.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -93,7 +93,7 @@ File: docFVITAX.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      Candidate documentation in echo area, popup or separate buffer.
 
 
-File: docFVITAX.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: doctWSF1C.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -106,7 +106,7 @@ press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
 by default for safety and unobtrusiveness.
 
 
-File: docFVITAX.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: doctWSF1C.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -135,7 +135,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docFVITAX.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: doctWSF1C.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -216,7 +216,6 @@ by my Cape (https://github.com/minad/cape) package.
               ("C-M-/" . dabbrev-expand))
        :config
        (add-to-list 'dabbrev-ignored-buffer-regexps "\\` ")
-       ;; Available since Emacs 29 (Use `dabbrev-ignored-buffer-regexps' on older Emacs)
        (add-to-list 'dabbrev-ignored-buffer-modes 'authinfo-mode)
        (add-to-list 'dabbrev-ignored-buffer-modes 'doc-view-mode)
        (add-to-list 'dabbrev-ignored-buffer-modes 'pdf-view-mode)
@@ -268,7 +267,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docFVITAX.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: doctWSF1C.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -314,7 +313,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: docFVITAX.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: doctWSF1C.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -368,7 +367,7 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: docFVITAX.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: doctWSF1C.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -400,7 +399,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docFVITAX.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: doctWSF1C.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -426,26 +425,16 @@ it is easy to improve this by using the command ‘corfu-send’ instead.
 which allows you to program the completions per shell command.  If you
 want to know more, look into this blog post
 (https://www.masteringemacs.org/article/pcomplete-context-sensitive-completion-emacs),
-which shows how to configure Pcomplete for git commands.  Since Emacs
-29, Pcomplete offers the ‘pcomplete-from-help’ function which parses the
-‘--help’ output of a command and produces completions for command line
-options.
-
-   Pcomplete has a few bugs on Emacs 28.  We can work around the issues
-with the Cape (https://github.com/minad/cape) library (Completion at
-point extensions).  Cape provides wrappers which sanitize the Pcomplete
-function.  On Emacs 29 the advices should not be necessary anymore,
-since most relevant bugs have been fixed.  In case you discover any
-remaining Pcomplete issues, please report them upstream.
-
-     ;; Sanitize the `pcomplete-completions-at-point' Capf.  The Capf has undesired
-     ;; side effects on Emacs 28.  These advices are not needed on Emacs 29 and newer.
-     (when (< emacs-major-version 29)
-       (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
-       (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify))
+which shows how to configure Pcomplete for git commands.  Pcomplete
+offers the ‘pcomplete-from-help’ function which parses the ‘--help’
+output of a command and produces completions for command line options.
+In the past, before Emacs 29, Pcomplete had a few bugs, which had to be
+worked around using the Cape (https://github.com/minad/cape) library
+(Completion at point extensions).  In case you discover any remaining
+Pcomplete issues, please report them upstream.
 
 
-File: docFVITAX.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: doctWSF1C.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -511,7 +500,7 @@ components.
        (global-corfu-mode))
 
 
-File: docFVITAX.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: doctWSF1C.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -543,7 +532,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docFVITAX.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: doctWSF1C.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -573,7 +562,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docFVITAX.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: doctWSF1C.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -603,7 +592,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docFVITAX.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: doctWSF1C.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -643,7 +632,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docFVITAX.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: doctWSF1C.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -691,7 +680,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docFVITAX.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: doctWSF1C.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -724,7 +713,7 @@ File: docFVITAX.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docFVITAX.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: doctWSF1C.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -744,7 +733,7 @@ The completion log messages are added to the ‘*Messages*’ buffer.
 the Capfs must be fixed there, since they Corfu cannot work around them.
 
 
-File: docFVITAX.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: doctWSF1C.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -761,19 +750,19 @@ Node: Features2186
 Node: Installation3627
 Node: Key bindings4131
 Node: Configuration5470
-Node: Auto completion11579
-Node: Buffer-local/Corfu-only completion styles13601
-Node: Completing in the minibuffer16004
-Node: Completing in the Eshell or Shell17559
-Node: Orderless completion19894
-Node: TAB-only completion22971
-Node: TAB-and-Go completion24344
-Node: Transfer completion to the minibuffer25438
-Node: Extensions26863
-Node: Complementary packages28678
-Node: Alternatives31003
-Node: Debugging Corfu32795
-Node: Contributions33647
+Node: Auto completion11490
+Node: Buffer-local/Corfu-only completion styles13512
+Node: Completing in the minibuffer15915
+Node: Completing in the Eshell or Shell17470
+Node: Orderless completion19271
+Node: TAB-only completion22348
+Node: TAB-and-Go completion23721
+Node: Transfer completion to the minibuffer24815
+Node: Extensions26240
+Node: Complementary packages28055
+Node: Alternatives30380
+Node: Debugging Corfu32172
+Node: Contributions33024
 
 End Tag Table
 
