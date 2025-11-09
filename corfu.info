@@ -1,4 +1,4 @@
-This is docUfWTpf.info, produced by makeinfo version 6.8 from
+This is docIR9mE0.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docUfWTpf.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docIR9mE0.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -63,12 +63,12 @@ Configuration
 
 
 
-File: docUfWTpf.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docIR9mE0.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
 
-   • Timer-based auto-completions (_off_ by default).
+   • Auto-completion with timer or character trigger (_off_ by default).
    • Popup display with scrollbar indicator and arrow key navigation.
    • The popup can be summoned explicitly by pressing ‘TAB’ at any time.
    • The current candidate is inserted with ‘TAB’ and selected with
@@ -89,11 +89,11 @@ File: docUfWTpf.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
    • Deprecated candidates are displayed as crossed out.
    • Icons are provided by external packages via margin formatter
      functions.
-   • Rich set of extensions: Quick keys, Index keys, Sorting by history,
-     Candidate documentation in echo area, popup or separate buffer.
+   • Rich set of extensions: Quick keys, index keys, sorting by history,
+     documentation in echo area, popup or separate buffer.
 
 
-File: docUfWTpf.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docIR9mE0.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -106,7 +106,7 @@ press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
 by default for safety and unobtrusiveness.
 
 
-File: docUfWTpf.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docIR9mE0.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -135,7 +135,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docUfWTpf.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docIR9mE0.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -267,7 +267,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docUfWTpf.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docIR9mE0.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -315,7 +315,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: docUfWTpf.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: docIR9mE0.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -369,7 +369,7 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: docUfWTpf.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docIR9mE0.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -401,7 +401,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docUfWTpf.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docIR9mE0.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -436,7 +436,7 @@ worked around using the Cape (https://github.com/minad/cape) library
 Pcomplete issues, please report them upstream.
 
 
-File: docUfWTpf.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docIR9mE0.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -502,7 +502,7 @@ components.
        (global-corfu-mode))
 
 
-File: docUfWTpf.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docIR9mE0.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -534,7 +534,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docUfWTpf.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: docIR9mE0.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -564,7 +564,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docUfWTpf.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docIR9mE0.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -594,7 +594,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docUfWTpf.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docIR9mE0.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -634,7 +634,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docUfWTpf.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docIR9mE0.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -682,7 +682,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docUfWTpf.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docIR9mE0.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -715,7 +715,7 @@ File: docUfWTpf.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docUfWTpf.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docIR9mE0.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -735,7 +735,7 @@ The completion log messages are added to the ‘*Messages*’ buffer.
 the Capfs must be fixed there, since they Corfu cannot work around them.
 
 
-File: docUfWTpf.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docIR9mE0.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -749,22 +749,22 @@ copyright assignment to the FSF.
 Tag Table:
 Node: Top208
 Node: Features2186
-Node: Installation3627
-Node: Key bindings4131
-Node: Configuration5470
-Node: Auto completion11490
-Node: Buffer-local/Corfu-only completion styles13623
-Node: Completing in the minibuffer16026
-Node: Completing in the Eshell or Shell17581
-Node: Orderless completion19382
-Node: TAB-only completion22459
-Node: TAB-and-Go completion23832
-Node: Transfer completion to the minibuffer24926
-Node: Extensions26351
-Node: Complementary packages28166
-Node: Alternatives30491
-Node: Debugging Corfu32283
-Node: Contributions33135
+Node: Installation3636
+Node: Key bindings4140
+Node: Configuration5479
+Node: Auto completion11499
+Node: Buffer-local/Corfu-only completion styles13632
+Node: Completing in the minibuffer16035
+Node: Completing in the Eshell or Shell17590
+Node: Orderless completion19391
+Node: TAB-only completion22468
+Node: TAB-and-Go completion23841
+Node: Transfer completion to the minibuffer24935
+Node: Extensions26360
+Node: Complementary packages28175
+Node: Alternatives30500
+Node: Debugging Corfu32292
+Node: Contributions33144
 
 End Tag Table
 
