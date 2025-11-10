@@ -89,7 +89,7 @@ Table of Contents
 
   Corfu is available from [GNU ELPA]. You can install it directly via
   `M-x package-install RET corfu RET'.  After installation, activate the
-  global minor mode with `M-x global-corfu-mode RET'. For completion
+  global minor mode with `M-x global-corfu-mode RET'.  For completion
   press `M-TAB' (or `TAB') within a buffer. Auto completion is disabled
   by default for safety and unobtrusiveness.
 

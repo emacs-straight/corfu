@@ -414,10 +414,20 @@ is a prefix length override, which is t for manual completion."
               (let ((str (buffer-substring-no-properties beg end))
                     (pt (- (point) beg))
                     (pred (plist-get plist :predicate)))
-                ;; We use `completion-try-completion' to check if there are
-                ;; completions. The upstream `completion--capf-wrapper' uses
-                ;; `try-completion' which is incorrect since it only checks for
-                ;; prefix completions.
+                ;; NOTE:
+                ;; * We use `completion-try-completion' to check if there are
+                ;;   completions. The upstream `completion--capf-wrapper' uses
+                ;;   `try-completion' which is incorrect since it only checks
+                ;;   for prefix completions.
+                ;; * `eglot--dumb-tryc' always returns nil which is
+                ;;   exceptional. Even if `eglot-completion-at-point' is marked
+                ;;   non-exclusive via `cape-capf-nonexclusive', the
+                ;;   `eglot--dumb-flex' completion style must additionally be
+                ;;   overridden to not defeat the check here.
+                ;; * An alternative would be to use `completion-all-completions'
+                ;;   to explicitly check for the presence of candidates. This
+                ;;   can be made efficient with a side-effecting predicate which
+                ;;   throws on first successful match.
                 (corfu--try-completion str table pred pt)))
           (cons fun res)))))
 
