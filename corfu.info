@@ -1,4 +1,4 @@
-This is docigNlPO.info, produced by makeinfo version 6.8 from
+This is doc7bncwN.info, produced by makeinfo version 6.8 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docigNlPO.info,  Node: Top,  Next: Features,  Up: (dir)
+File: doc7bncwN.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -63,7 +63,7 @@ Configuration
 
 
 
-File: docigNlPO.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: doc7bncwN.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -93,7 +93,7 @@ File: docigNlPO.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      documentation in echo area, popup or separate buffer.
 
 
-File: docigNlPO.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: doc7bncwN.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -106,7 +106,7 @@ press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
 by default for safety and unobtrusiveness.
 
 
-File: docigNlPO.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: doc7bncwN.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -135,7 +135,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docigNlPO.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: doc7bncwN.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -267,7 +267,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docigNlPO.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: doc7bncwN.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -315,7 +315,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: docigNlPO.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: doc7bncwN.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -369,7 +369,7 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: docigNlPO.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: doc7bncwN.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -401,7 +401,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docigNlPO.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: doc7bncwN.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -436,7 +436,7 @@ worked around using the Cape (https://github.com/minad/cape) library
 Pcomplete issues, please report them upstream.
 
 
-File: docigNlPO.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: doc7bncwN.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -502,7 +502,7 @@ components.
        (global-corfu-mode))
 
 
-File: docigNlPO.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: doc7bncwN.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -534,7 +534,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docigNlPO.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: doc7bncwN.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -564,7 +564,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docigNlPO.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: doc7bncwN.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -594,7 +594,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docigNlPO.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: doc7bncwN.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -634,7 +634,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docigNlPO.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: doc7bncwN.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -682,7 +682,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docigNlPO.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: doc7bncwN.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -715,7 +715,7 @@ File: docigNlPO.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docigNlPO.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: doc7bncwN.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -732,10 +732,10 @@ The completion log messages are added to the ‘*Messages*’ buffer.
      (setq completion-at-point-functions (list (cape-capf-debug #'cape-dict)))
 
    Sometimes you will find errors inside Capfs.  Such errors are bugs in
-the Capfs must be fixed there, since they Corfu cannot work around them.
+the Capfs must be fixed there, since Corfu cannot work around them.
 
 
-File: docigNlPO.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: doc7bncwN.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -764,7 +764,7 @@ Node: Extensions26377
 Node: Complementary packages28192
 Node: Alternatives30517
 Node: Debugging Corfu32309
-Node: Contributions33161
+Node: Contributions33156
 
 End Tag Table
 

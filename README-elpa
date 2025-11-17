@@ -762,8 +762,7 @@ Table of Contents
   └────
 
   Sometimes you will find errors inside Capfs. Such errors are bugs in
-  the Capfs must be fixed there, since they Corfu cannot work around
-  them.
+  the Capfs must be fixed there, since Corfu cannot work around them.
 
 
 [Cape] <https://github.com/minad/cape>
