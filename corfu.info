@@ -1,4 +1,4 @@
-This is doc7bncwN.info, produced by makeinfo version 6.8 from
+This is docKKPuZv.info, produced by makeinfo version 7.1.1 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: doc7bncwN.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docKKPuZv.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -32,9 +32,9 @@ Additional Capfs and completion utilities are provided by the separate
 Cape (https://github.com/minad/cape) package.
 
    *NOTE*: Corfu relies on child frames to show the popup.  On Emacs 31
-this works even for terminal Emacs, but support is still experimental.
-Use the corfu-terminal (https://codeberg.org/akib/emacs-corfu-terminal)
-package on older Emacs versions.
+this works for terminal Emacs.  Use the corfu-terminal
+(https://codeberg.org/akib/emacs-corfu-terminal) package on older Emacs
+versions.
 
 * Menu:
 
@@ -48,7 +48,7 @@ package on older Emacs versions.
 * Debugging Corfu::
 * Contributions::
 
-— The Detailed Node Listing —
+-- The Detailed Node Listing --
 
 Configuration
 
@@ -63,7 +63,7 @@ Configuration
 
 
 
-File: doc7bncwN.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docKKPuZv.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -93,7 +93,7 @@ File: doc7bncwN.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      documentation in echo area, popup or separate buffer.
 
 
-File: doc7bncwN.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docKKPuZv.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -106,7 +106,7 @@ press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
 by default for safety and unobtrusiveness.
 
 
-File: doc7bncwN.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docKKPuZv.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -135,7 +135,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: doc7bncwN.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docKKPuZv.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -267,7 +267,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: doc7bncwN.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docKKPuZv.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -315,7 +315,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: doc7bncwN.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: docKKPuZv.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -369,14 +369,14 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: doc7bncwN.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docKKPuZv.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
 
 Corfu can be used for completion in the minibuffer, since it relies on
 child frames to display the candidates.  The Corfu popup floats on top
-of the Emacs frame and can be shown even if it doesn’t fit inside the
+of the Emacs frame and can be shown even if it doesn't fit inside the
 minibuffer.
 
    ‘global-corfu-mode’ activates ‘corfu-mode’ in the minibuffer if the
@@ -401,7 +401,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: doc7bncwN.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docKKPuZv.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -436,7 +436,7 @@ worked around using the Cape (https://github.com/minad/cape) library
 Pcomplete issues, please report them upstream.
 
 
-File: doc7bncwN.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docKKPuZv.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -502,7 +502,7 @@ components.
        (global-corfu-mode))
 
 
-File: doc7bncwN.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docKKPuZv.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -534,7 +534,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: doc7bncwN.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: docKKPuZv.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -564,7 +564,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: doc7bncwN.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docKKPuZv.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -594,7 +594,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: doc7bncwN.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docKKPuZv.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -634,7 +634,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: doc7bncwN.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docKKPuZv.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -652,8 +652,7 @@ look into complementary packages to enhance your setup.
 
    • corfu-terminal (https://codeberg.org/akib/emacs-corfu-terminal):
      Child frames are supported by terminal Emacs 31 out of the box.  On
-     older Emacs versions, this package provides an overlay-based popup
-     display.
+     older Emacs versions, this package provides an overlay-based popup.
 
    • Orderless (https://github.com/oantolin/orderless): Corfu supports
      completion styles, including the advanced ‘orderless’ completion
@@ -682,7 +681,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: doc7bncwN.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docKKPuZv.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -715,7 +714,7 @@ File: doc7bncwN.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: doc7bncwN.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docKKPuZv.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -735,7 +734,7 @@ The completion log messages are added to the ‘*Messages*’ buffer.
 the Capfs must be fixed there, since Corfu cannot work around them.
 
 
-File: doc7bncwN.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docKKPuZv.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -747,24 +746,24 @@ copyright assignment to the FSF.
 
 
 Tag Table:
-Node: Top208
-Node: Features2203
-Node: Installation3653
-Node: Key bindings4157
-Node: Configuration5496
-Node: Auto completion11516
-Node: Buffer-local/Corfu-only completion styles13649
-Node: Completing in the minibuffer16052
-Node: Completing in the Eshell or Shell17607
-Node: Orderless completion19408
-Node: TAB-only completion22485
-Node: TAB-and-Go completion23858
-Node: Transfer completion to the minibuffer24952
-Node: Extensions26377
-Node: Complementary packages28192
-Node: Alternatives30517
-Node: Debugging Corfu32309
-Node: Contributions33156
+Node: Top210
+Node: Features2164
+Node: Installation3614
+Node: Key bindings4118
+Node: Configuration5457
+Node: Auto completion11477
+Node: Buffer-local/Corfu-only completion styles13610
+Node: Completing in the minibuffer16013
+Node: Completing in the Eshell or Shell17566
+Node: Orderless completion19367
+Node: TAB-only completion22444
+Node: TAB-and-Go completion23817
+Node: Transfer completion to the minibuffer24911
+Node: Extensions26336
+Node: Complementary packages28151
+Node: Alternatives30463
+Node: Debugging Corfu32255
+Node: Contributions33102
 
 End Tag Table
 

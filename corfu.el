@@ -479,19 +479,21 @@ FRAME is the existing frame."
          (x-gtk-resize-child-frames corfu--gtk-resize-child-frames)
          (before-make-frame-hook)
          (after-make-frame-functions)
-         (parent (window-frame)))
+         (parent (window-frame))
+         (graphic (display-graphic-p parent)))
     (unless (and (frame-live-p frame)
                  (eq (frame-parent frame)
-                     (and (not (bound-and-true-p exwm--connection)) parent))
+                     (and (not (and graphic (bound-and-true-p exwm--connection)))
+                          parent))
                  ;; Handle mixed tty/graphical sessions
-                 (eq (display-graphic-p frame)
-                     (display-graphic-p parent))
+                 (eq graphic (display-graphic-p frame))
                  ;; If there is more than one window, `frame-root-window' may
                  ;; return nil.  Recreate the frame in this case.
                  (window-live-p (frame-root-window frame)))
       (when frame (delete-frame frame))
       (setq frame (make-frame
                    `((parent-frame . ,parent)
+                     (name . ,(if graphic "EmacsCorfuGUI" "EmacsCorfuTTY"))
                      (minibuffer . ,(minibuffer-window parent))
                      (width . 0) (height . 0) (visibility . nil)
                      (right-fringe . ,right-fringe-width)
@@ -562,10 +564,14 @@ FRAME is the existing frame."
 
 (defun corfu--hide-frame (frame)
   "Hide child FRAME."
-  (when (and (frame-live-p frame) (frame-visible-p frame)
-             (not (frame-parameter frame 'corfu--hide-timer)))
-    (set-frame-parameter frame 'corfu--hide-timer
-                         (run-at-time 0 nil #'corfu--hide-frame-deferred frame))))
+  (when (and (frame-live-p frame) (frame-visible-p frame))
+    (cond
+     ((not (display-graphic-p frame))
+      (corfu--hide-frame-deferred frame))
+     ((not (frame-parameter frame 'corfu--hide-timer))
+      (set-frame-parameter
+       frame 'corfu--hide-timer
+       (run-at-time 0 nil #'corfu--hide-frame-deferred frame))))))
 
 (defun corfu--move-to-front (elem list)
   "Move ELEM to front of LIST."
@@ -1104,27 +1110,27 @@ A scroll bar is displayed from LO to LO+BAR."
              (ml (min 16 (ceiling (* cw corfu-left-margin-width))))
              (mr (min 16 (ceiling (* cw corfu-right-margin-width))))
              (bw (min mr (ceiling (* cw corfu-bar-width))))
-             (fringe (display-graphic-p))
-             (marginl (and (not fringe) (propertize " " 'display `(space :width (,ml)))))
-             (sbar (if fringe
+             (graphic (display-graphic-p))
+             (marginl (and (not graphic) (propertize " " 'display `(space :width (,ml)))))
+             (sbar (if graphic
                        #(" " 0 1 (display (right-fringe corfu--bar corfu--bar)))
                      (concat
                       (propertize " " 'display `(space :align-to (- right (,bw))))
                       (propertize " " 'face 'corfu-bar 'display `(space :width (,bw))))))
-             (cbar (if fringe
+             (cbar (if graphic
                        #("  " 0 1 (display (left-fringe corfu--nil corfu-current))
                          1 2 (display (right-fringe corfu--bar corfu--cbar)))
                      sbar))
-             (cmargin (and fringe
+             (cmargin (and graphic
                            #("  " 0 1 (display (left-fringe corfu--nil corfu-current))
                              1 2 (display (right-fringe corfu--nil corfu-current)))))
              (pos (posn-x-y pos))
-             (width (+ (* width cw) (if fringe 0 (+ ml mr))))
+             (width (+ (* width cw) (if graphic 0 (+ ml mr))))
              ;; XXX HACK: Minimum popup height must be at least 1 line of the
              ;; parent frame (gh:minad/corfu#261).
              (height (max lh (* (length lines) ch)))
              (edge (window-inside-pixel-edges))
-             (border (alist-get 'internal-border-width corfu--frame-parameters))
+             (border (if graphic (alist-get 'internal-border-width corfu--frame-parameters) 0))
              (x (max 0 (min (+ (car edge) (- (or (car pos) 0) ml (* cw off) border))
                             (- (frame-pixel-width) width))))
              (yb (+ (cadr edge) (or (cdr pos) 0) lh
@@ -1133,7 +1139,7 @@ A scroll bar is displayed from LO to LO+BAR."
                     (- yb height lh border border)
                   yb))
              (bmp (logxor (1- (ash 1 mr)) (1- (ash 1 bw)))))
-        (setq left-fringe-width (if fringe ml 0) right-fringe-width (if fringe mr 0))
+        (setq left-fringe-width (if graphic ml 0) right-fringe-width (if graphic mr 0))
         ;; Define an inverted corfu--bar face
         (unless (equal (and (facep 'corfu--bar) (face-attribute 'corfu--bar :foreground))
                        (face-attribute 'corfu-bar :background))
@@ -1246,7 +1252,7 @@ AUTO is non-nil when initializing auto completion."
         (corfu--done (car corfu--candidates) 'finished nil)))
      ;; 2) There exist candidates => Show candidates popup.
      (corfu--candidates
-      (let ((pos (posn-at-point (+ beg (length corfu--base)))))
+      (let ((pos (posn-at-point (min (point-max) (+ beg (length corfu--base))))))
         (corfu--preview-current beg end)
         (corfu--candidates-popup pos)))
      ;; 3) No candidates & `corfu-quit-no-match' & initialized => Confirmation popup.
@@ -1510,7 +1516,7 @@ The ORIG function takes the FUN and WHICH arguments."
 
 (with-eval-after-load 'corfu-terminal
   (when (featurep 'tty-child-frames)
-    (display-warning 'corfu "Suggestion: Try `tty-child-frames' instead of `corfu-terminal' on Emacs 31")))
+    (display-warning 'corfu "`corfu-terminal' is not needed on Emacs 31")))
 
 (provide 'corfu)
 ;;; corfu.el ends here
