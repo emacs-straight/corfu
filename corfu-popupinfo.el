@@ -5,8 +5,8 @@
 ;; Author: Yuwei Tian <fishtai0@gmail.com>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 2.5
-;; Package-Requires: ((emacs "29.1") (compat "30") (corfu "2.5"))
+;; Version: 2.6
+;; Package-Requires: ((emacs "29.1") (compat "30") (corfu "2.6"))
 ;; URL: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -195,7 +195,11 @@ all values are in pixels relative to the origin.  See
                                 (enable-local-variables :safe)
                                 (non-essential t)
                                 (delay-mode-hooks t)
-                                (find-file-hook '(global-font-lock-mode-check-buffers)))
+                                (find-file-hook
+                                 (list
+                                  (static-if (>= emacs-major-version 30)
+                                      'global-font-lock-mode-enable-in-buffer
+                                    'global-font-lock-mode-check-buffers))))
                             (find-file-noselect (car loc) t))))))
             (with-current-buffer buffer
               (save-excursion
@@ -422,19 +426,23 @@ See `corfu-popupinfo-end' for the argument N."
 If ARG is omitted or nil, scroll upward by a near full screen.
 See `scroll-up' for details.  If the info popup is not visible,
 the other window is scrolled."
-  (interactive "p")
+  (interactive "P")
   (if (corfu-popupinfo--visible-p)
       (with-selected-frame corfu-popupinfo--frame
         (with-current-buffer corfu-popupinfo--buffer
-          (scroll-up n)))
+          (scroll-up-command n)))
     (scroll-other-window n)))
 
 (defun corfu-popupinfo-scroll-down (&optional n)
   "Scroll text of info popup window down N lines.
 
 See `corfu-popupinfo-scroll-up' for more details."
-  (interactive "p")
-  (corfu-popupinfo-scroll-up (- (or n 1))))
+  (interactive "P")
+  (if (corfu-popupinfo--visible-p)
+      (with-selected-frame corfu-popupinfo--frame
+        (with-current-buffer corfu-popupinfo--buffer
+          (scroll-down-command n)))
+    (scroll-other-window-down n)))
 
 (defun corfu-popupinfo--toggle (fun)
   "Set documentation getter FUN and toggle popup."
