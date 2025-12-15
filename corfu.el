@@ -140,6 +140,10 @@ separator: Only stay alive if there is no match and
   "Width of the bar in units of the character width."
   :type 'float)
 
+(defcustom corfu-border-width 1
+  "Width of the border in pixels, only applies to GUI Emacs."
+  :type 'natnum)
+
 (defcustom corfu-margin-formatters nil
   "Registry for margin formatter functions.
 Each function of the list is called with the completion metadata as
@@ -339,8 +343,6 @@ settings `corfu-auto-delay', `corfu-auto-prefix' and
     (min-height . t)
     (border-width . 0)
     (outer-border-width . 0)
-    (internal-border-width . 1)
-    (child-frame-border-width . 1)
     (vertical-scroll-bars . nil)
     (horizontal-scroll-bars . nil)
     (menu-bar-lines . 0)
@@ -355,7 +357,8 @@ settings `corfu-auto-delay', `corfu-auto-prefix' and
     (no-special-glyphs . t)
     (desktop-dont-save . t)
     (inhibit-double-buffering . t)) ;; Avoid display artifacts on X/Gtk builds
-  "Default child frame parameters.")
+  "Default child frame parameters.
+It is recommended to avoid changing these parameters.")
 
 (defvar corfu--buffer-parameters
   '((mode-line-format . nil)
@@ -378,7 +381,8 @@ settings `corfu-auto-delay', `corfu-auto-prefix' and
     (indicate-buffer-boundaries . nil)
     (buffer-read-only . t)
     (pixel-scroll-precision-mode . nil))
-  "Default child frame buffer parameters.")
+  "Default child frame buffer parameters.
+It is recommended to avoid changing these parameters.")
 
 (defvar corfu--mouse-ignore-map
   (let ((map (define-keymap "<touchscreen-begin>" #'ignore)))
@@ -499,6 +503,8 @@ FRAME is the existing frame."
                      (width . 0) (height . 0) (visibility . nil)
                      (right-fringe . ,right-fringe-width)
                      (left-fringe . ,left-fringe-width)
+                     (internal-border-width . ,corfu-border-width)
+                     (child-frame-border-width . ,corfu-border-width)
                      ,@corfu--frame-parameters))))
     ;; XXX HACK Setting the same frame-parameter/face-background is not a nop.
     ;; Check before applying the setting. Without the check, the frame flickers
@@ -523,6 +529,8 @@ FRAME is the existing frame."
                      (font . ,(frame-parameter parent 'font))
                      (right-fringe . ,right-fringe-width)
                      (left-fringe . ,left-fringe-width)
+                     (internal-border-width . ,corfu-border-width)
+                     (child-frame-border-width . ,corfu-border-width)
                      ,@corfu--frame-parameters))
            (diff (cl-loop for p in should for (k . v) = p
                           unless (equal (alist-get k is) v) collect p)))
@@ -540,7 +548,7 @@ FRAME is the existing frame."
       (cond
        ((and (= x px) (= y py)) (set-frame-size frame width height t))
        ;; NOTE: Experimental new Emacs 31 addition by Martin Rudalics.
-       ;; https://lists.gnu.org/archive/html/emacs-devel/2025-12/msg00359.html
+       ;; https://lists.gnu.org/archive/html/emacs-devel/2025-12/msg00414.html
        ((fboundp 'set-frame-size-and-position-pixelwise)
         (set-frame-size-and-position-pixelwise frame width height x y))
        (t (set-frame-size frame width height t)
@@ -1131,9 +1139,10 @@ A scroll bar is displayed from LO to LO+BAR."
              ;; parent frame (gh:minad/corfu#261).
              (height (max lh (* (length lines) ch)))
              (edge (window-inside-pixel-edges))
-             (border (if graphic (alist-get 'internal-border-width corfu--frame-parameters) 0))
+             (border (if graphic corfu-border-width 0))
              (x (max 0 (min (+ (car edge) (- (or (car pos) 0) ml (* cw off) border))
-                            (- (frame-pixel-width) width))))
+                            (- (frame-pixel-width) width
+                               (if graphic (+ ml mr (* 2 border)) 0)))))
              (yb (+ (cadr edge) (or (cdr pos) 0) lh
                     (static-if (< emacs-major-version 31) (window-tab-line-height) 0)))
              (y (if (> (+ yb (* corfu-count ch) lh lh) (frame-pixel-height))
