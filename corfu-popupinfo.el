@@ -45,6 +45,13 @@
   (require 'cl-lib)
   (require 'subr-x))
 
+(defface corfu-popupinfo
+  '((t :inherit corfu-default))
+  "Face used for the info popup.
+In order to use a smaller face for the popupinfo, use for example:
+  (set-face-attribute \\='corfu-popupinfo nil :height 0.8)"
+  :group 'corfu-faces)
+
 (defcustom corfu-popupinfo-delay '(2.0 . 1.0)
   "Automatically update info popup after that number of seconds.
 
@@ -70,6 +77,11 @@ documentation from the backend is usually expensive."
 (defcustom corfu-popupinfo-hide t
   "Hide the popup during the transition between candidates."
   :type 'boolean
+  :group 'corfu)
+
+(defcustom corfu-popupinfo-margin-width 1
+  "Margin at the left and right side of the popup."
+  :type 'natnum
   :group 'corfu)
 
 (defcustom corfu-popupinfo-max-width 80
@@ -122,11 +134,10 @@ documentation from the backend is usually expensive."
 (defvar corfu-popupinfo--buffer-parameters
   '((truncate-partial-width-windows . nil)
     (truncate-lines . nil)
-    (left-margin-width . 1)
-    (right-margin-width . 1)
     (word-wrap . t)
     (char-property-alias-alist (face font-lock-face)))
-  "Buffer parameters.")
+  "Additional child frame buffer parameters.
+It is recommended to avoid changing these parameters.")
 
 (defvar corfu-popupinfo--frame nil
   "Info popup child frame.")
@@ -239,9 +250,7 @@ all values are in pixels relative to the origin.  See
   "Return popup size as pair."
   (let* ((cw (default-font-width))
          (lh (default-line-height))
-         (margin
-          (* cw (+ (alist-get 'left-margin-width corfu-popupinfo--buffer-parameters)
-                   (alist-get 'right-margin-width corfu-popupinfo--buffer-parameters))))
+         (margin (* cw (* 2 corfu-popupinfo-margin-width)))
          (max-height (* lh corfu-popupinfo-max-height))
          (max-width (* cw corfu-popupinfo-max-width)))
     (or (when corfu-popupinfo-resize
@@ -358,7 +367,11 @@ form (X Y WIDTH HEIGHT DIR)."
                 (insert content)
                 (goto-char (point-min)))
               (dolist (var corfu-popupinfo--buffer-parameters)
-                (set (make-local-variable (car var)) (cdr var))))
+                (set (make-local-variable (car var)) (cdr var)))
+              (setq left-margin-width corfu-popupinfo-margin-width
+                    right-margin-width corfu-popupinfo-margin-width)
+              (when-let ((m (memq 'corfu-default (alist-get 'default face-remapping-alist))))
+                (setcar m 'corfu-popupinfo)))
           (corfu-popupinfo--hide)
           (setq cand-changed nil coords-changed nil)))
       (when (or cand-changed coords-changed)
@@ -370,21 +383,21 @@ form (X Y WIDTH HEIGHT DIR)."
                          (cons
                           (- (frame-pixel-width corfu-popupinfo--frame) border border)
                           (- (frame-pixel-height corfu-popupinfo--frame) border border)))))
-                     (margin-quirk (not (frame-live-p corfu-popupinfo--frame))))
-          (with-current-buffer corfu-popupinfo--buffer
-            (setq corfu-popupinfo--frame
+                     (old-frame corfu-popupinfo--frame))
+          (setq corfu-popupinfo--frame
+                (with-current-buffer corfu-popupinfo--buffer
                   (corfu--make-frame corfu-popupinfo--frame
-                                     area-x area-y area-w area-h)
-                  corfu-popupinfo--toggle t
-                  corfu-popupinfo--lock-dir area-d
-                  corfu-popupinfo--candidate candidate
-                  corfu-popupinfo--coordinates new-coords)
-            ;; XXX HACK: Force margin update. For some reason, the call to
-            ;; `set-window-buffer' in `corfu--make-frame' is not effective the
-            ;; first time. Why does Emacs have all these quirks?
-            (when margin-quirk
-              (set-window-buffer (frame-root-window corfu-popupinfo--frame)
-                                 corfu-popupinfo--buffer))))))))
+                                     area-x area-y area-w area-h))
+                corfu-popupinfo--toggle t
+                corfu-popupinfo--lock-dir area-d
+                corfu-popupinfo--candidate candidate
+                corfu-popupinfo--coordinates new-coords)
+          ;; XXX HACK: Force margin update. For some reason, the call to
+          ;; `set-window-buffer' in `corfu--make-frame' is not effective the
+          ;; first time. Why does Emacs have all these quirks?
+          (unless (eq old-frame corfu-popupinfo--frame)
+            (set-window-buffer (frame-root-window corfu-popupinfo--frame)
+                               corfu-popupinfo--buffer)))))))
 
 (defun corfu-popupinfo--hide ()
   "Clear the info popup buffer content and hide it."
