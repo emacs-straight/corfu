@@ -52,7 +52,7 @@ In order to use a smaller face for the popupinfo, use for example:
   (set-face-attribute \\='corfu-popupinfo nil :height 0.8)"
   :group 'corfu-faces)
 
-(defcustom corfu-popupinfo-delay '(2.0 . 1.0)
+(defcustom corfu-popupinfo-delay '(2.0 . 0.5)
   "Automatically update info popup after that number of seconds.
 
 The value can be a pair of two floats to specify initial and
@@ -74,7 +74,7 @@ documentation from the backend is usually expensive."
                                (choice (const nil) number))))
   :group 'corfu)
 
-(defcustom corfu-popupinfo-hide t
+(defcustom corfu-popupinfo-hide nil
   "Hide the popup during the transition between candidates."
   :type 'boolean
   :group 'corfu)
@@ -246,8 +246,8 @@ all values are in pixels relative to the origin.  See
                   (buffer-string))))
       (and (not (string-blank-p res)) res))))
 
-(defun corfu-popupinfo--size ()
-  "Return popup size as pair."
+(defun corfu-popupinfo--compute-size ()
+  "Compute popup size from buffer content and return as pair."
   (let* ((cw (default-font-width))
          (lh (default-line-height))
          (margin (* cw (* 2 corfu-popupinfo-margin-width)))
@@ -273,6 +273,13 @@ all values are in pixels relative to the origin.  See
                       ;; `window-safe-min-height' to 0, which feels problematic.
                       (min (max (cdr size) lh) max-height))))))
         (cons (+ margin max-width) max-height))))
+
+(defun corfu-popupinfo--last-size ()
+  "Return last popup size as pair."
+  (let ((border (if (display-graphic-p corfu--frame) (* 2 corfu-border-width) 0)))
+    (cons
+     (- (frame-pixel-width corfu-popupinfo--frame) border)
+     (- (frame-pixel-height corfu-popupinfo--frame) border))))
 
 (defun corfu-popupinfo--frame-geometry (frame)
   "Return position and size geometric attributes of FRAME.
@@ -303,6 +310,7 @@ form (X Y WIDTH HEIGHT DIR)."
   (pcase-let*
       ((cw (default-font-width))
        (lh (default-line-height))
+       (`(,pw . ,ph) ps)
        (border (if (display-graphic-p corfu--frame) corfu-border-width 0))
        (`(,_pfx ,_pfy ,pfw ,pfh)
         (corfu-popupinfo--frame-geometry (frame-parent corfu--frame)))
@@ -312,24 +320,20 @@ form (X Y WIDTH HEIGHT DIR)."
                          (window-tab-line-height)
                          (or (cdr (posn-x-y (posn-at-point (point)))) 0))))
        ;; Popups aligned at top
-       (top-aligned (or below (< (cdr ps) cfh)))
+       (top-aligned (or below (< ph cfh)))
        ;; Left display area
-       (ahy (if top-aligned
-                cfy
-              (max 0 (- (+ cfy cfh) border border (cdr ps)))))
-       (ahh (if top-aligned
-                (min (- pfh cfy) (cdr ps))
-              (min (- (+ cfy cfh) border border) (cdr ps))))
-       (al (list (max 0 (- cfx (car ps) border)) ahy
-                 (min (- cfx border) (car ps)) ahh 'left))
+       (ahy (if top-aligned cfy (max 0 (- (+ cfy cfh) border border ph))))
+       (ahh (min ph (if top-aligned (- pfh cfy) (- (+ cfy cfh) border border))))
+       (al (list (max 0 (- cfx pw border)) ahy
+                 (min (- cfx border) pw) ahh 'left))
        ;; Right display area
        (arx (+ cfx cfw (- border)))
-       (ar (list arx ahy (min (- pfw arx border border) (car ps)) ahh 'right))
+       (ar (list arx ahy (min (- pfw arx border border) pw) ahh 'right))
        ;; Vertical display area
-       (avw (min (car ps) (- pfw cfx border border)))
+       (avw (min pw (- pfw cfx border border)))
        (av (if below
-               (list cfx (+ cfy cfh (- border)) avw (min (- pfh cfy cfh border) (cdr ps)) 'vertical)
-             (let ((h (min (- cfy border border) (cdr ps))))
+               (list cfx (+ cfy cfh (- border)) avw (min (- pfh cfy cfh border) ph) 'vertical)
+             (let ((h (min (- cfy border border) ph)))
                (list cfx (max 0 (- cfy h border)) avw h 'vertical)))))
     (unless (and corfu-popupinfo--lock-dir
                  (corfu-popupinfo--fits-p
@@ -375,14 +379,11 @@ form (X Y WIDTH HEIGHT DIR)."
           (corfu-popupinfo--hide)
           (setq cand-changed nil coords-changed nil)))
       (when (or cand-changed coords-changed)
-        (pcase-let* ((border (if (display-graphic-p corfu--frame) corfu-border-width 0))
-                     (`(,area-x ,area-y ,area-w ,area-h ,area-d)
+        (pcase-let* ((`(,area-x ,area-y ,area-w ,area-h ,area-d)
                       (corfu-popupinfo--area
                        (if cand-changed
-                           (corfu-popupinfo--size)
-                         (cons
-                          (- (frame-pixel-width corfu-popupinfo--frame) border border)
-                          (- (frame-pixel-height corfu-popupinfo--frame) border border)))))
+                           (corfu-popupinfo--compute-size)
+                         (corfu-popupinfo--last-size))))
                      (old-frame corfu-popupinfo--frame))
           (setq corfu-popupinfo--frame
                 (with-current-buffer corfu-popupinfo--buffer
@@ -507,18 +508,15 @@ not be displayed until this command is called again, even if
                                        corfu-popupinfo-delay)
                             corfu-popupinfo-delay))
                    (corfu-popupinfo--toggle))
-              (if (or (<= delay 0)
-                      (and (equal-including-properties cand corfu-popupinfo--candidate)
-                           (corfu-popupinfo--visible-p)))
-                  (corfu-popupinfo--show cand)
-                (when (corfu-popupinfo--visible-p)
+              (progn
+                (when (and (corfu-popupinfo--visible-p) (> delay 0))
                   (cond
                    (corfu-popupinfo-hide
                     (corfu-popupinfo--hide))
                    (corfu-popupinfo--candidate
                     (corfu-popupinfo--show corfu-popupinfo--candidate))))
                 (setq corfu-popupinfo--timer
-                    (run-at-time delay nil #'corfu-popupinfo--show cand)))
+                      (run-at-time delay nil #'corfu-popupinfo--show cand)))
             (unless (equal-including-properties cand corfu-popupinfo--candidate)
               (corfu-popupinfo--hide))))
       (corfu-popupinfo--hide))))
