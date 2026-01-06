@@ -171,35 +171,6 @@ This function is used even if a completion table specifies its
 own sort function."
   :type '(choice (const nil) function))
 
-(defcustom corfu-auto-trigger ""
-  "Characters which trigger auto completion.
-If a trigger character is detected `corfu-auto-prefix' is ignored."
-  :type 'string)
-
-(defcustom corfu-auto-prefix 3
-  "Minimum length of prefix for auto completion.
-The completion backend can override this with :company-prefix-length.
-It is not recommended to use a small prefix length (below 2), since this
-will create high load for Emacs.  See also `corfu-auto-delay' and
-`corfu-auto-trigger'."
-  :type 'natnum)
-
-(defcustom corfu-auto-delay 0.2
-  "Delay for auto completion.
-It is not recommended to use a short delay or even 0, since this will
-create high load for Emacs, in particular if executing the completion
-backend is costly.  Instead of reducing the delay too much, try
-`corfu-auto-trigger' to trigger immediate completion after certain
-characters."
-  :type 'float)
-
-(defcustom corfu-auto-commands
-  '("self-insert-command\\'" "delete-backward-char\\'" "\\`backward-delete-char"
-    c-electric-colon c-electric-lt-gt c-electric-slash c-scope-operator)
-  "Commands which initiate auto completion.
-The list can contain either command symbols or regular expressions."
-  :type '(repeat (choice regexp symbol)))
-
 (defcustom corfu-auto nil
   "Enable auto completion.
 Auto completion is disabled by default for safety and unobtrusiveness.
@@ -276,9 +247,6 @@ settings `corfu-auto-delay', `corfu-auto-prefix' and
   "M-g" 'corfu-info-location
   "M-h" 'corfu-info-documentation
   "M-SPC" #'corfu-insert-separator)
-
-(defvar corfu--auto-timer (timer-create)
-  "Auto completion timer.")
 
 (defvar corfu--candidates nil
   "List of candidates.")
@@ -395,47 +363,33 @@ It is recommended to avoid changing these parameters.")
 (defun corfu--replace (beg end str)
   "Replace range between BEG and END with STR."
   (unless (equal str (buffer-substring-no-properties beg end))
-    ;; bug#55205: completion--replace removed properties as an unwanted
-    ;; side-effect.  We also don't want to leave text properties.
-    (completion--replace beg end (substring-no-properties str))))
+    (completion--replace beg end str)))
 
-(defun corfu--capf-wrapper (fun &optional prefix)
+(defun corfu--capf-wrapper (fun &optional prefix trigger)
   "Wrapper for `completion-at-point' FUN.
 The wrapper determines if the Capf is applicable at the current position
 and performs sanity checking on the returned result.  For non-exclusive
 Capfs, the wrapper checks if the current input can be completed.  PREFIX
-is a prefix length override, which is t for manual completion."
+is the minimum prefix length and TRIGGER is a list of trigger events."
   (pcase (funcall fun)
     ((and res `(,beg ,end ,table . ,plist))
      (and (integer-or-marker-p beg) ;; Valid Capf result
           (<= beg (point) end)      ;; Sanity checking
-          ;; When auto completing, check the prefix length!
-          (let ((len (or prefix
-                         (plist-get plist :company-prefix-length)
-                         (- (point) beg))))
-            (or (eq len t) (>= len corfu-auto-prefix)
-                (seq-contains-p corfu-auto-trigger last-command-event)))
+          ;; Check minimal prefix length if given.
+          (or (not prefix)
+              (let ((len (or (plist-get plist :company-prefix-length)
+                             (- (point) beg))))
+                (or (eq len t) (>= len prefix)
+                    (seq-contains-p trigger last-command-event))))
           ;; For non-exclusive Capfs, check for valid completion.
-          (or (not (eq 'no (plist-get plist :exclusive)))
-              (let ((str (buffer-substring-no-properties beg end))
-                    (pt (- (point) beg))
-                    (pred (plist-get plist :predicate)))
-                ;; NOTE:
-                ;; * We use `completion-try-completion' to check if there are
-                ;;   completions. The upstream `completion--capf-wrapper' uses
-                ;;   `try-completion' which is incorrect since it only checks
-                ;;   for prefix completions.
-                ;; * `eglot--dumb-tryc' always returns nil which is
-                ;;   exceptional. Even if `eglot-completion-at-point' is marked
-                ;;   non-exclusive via `cape-capf-nonexclusive', the
-                ;;   `eglot--dumb-flex' completion style must additionally be
-                ;;   overridden to not defeat the check here.
-                ;; * An alternative would be to use `completion-all-completions'
-                ;;   to explicitly check for the presence of candidates. This
-                ;;   can be made efficient with a side-effecting predicate which
-                ;;   throws on first successful match.
-                (corfu--try-completion str table pred pt)))
-          (cons fun res)))))
+          (if (eq 'no (plist-get plist :exclusive))
+              (let* ((str (buffer-substring-no-properties beg end))
+                     (pt (- (point) beg))
+                     (pred (plist-get plist :predicate))
+                     (state (corfu--compute (cons str pt) table pred)))
+                (and (alist-get 'corfu--candidates state)
+                     `(,fun ,@res :corfu--state ,state)))
+            (cons fun res))))))
 
 (defun corfu--make-buffer (name)
   "Create buffer with NAME."
@@ -676,9 +630,10 @@ FRAME is the existing frame."
       (corfu--metadata-get 'display-sort-function)
       corfu-sort-function))
 
-(defun corfu--recompute (str pt table pred)
-  "Recompute state from STR, PT, TABLE and PRED."
-  (pcase-let* ((before (substring str 0 pt))
+(defun corfu--compute (input table pred)
+  "Compute state from INPUT, TABLE and PRED."
+  (pcase-let* ((`(,str . ,pt) input)
+               (before (substring str 0 pt))
                (after (substring str pt))
                (corfu--metadata (completion-metadata before table pred))
                ;; bug#47678: `completion-boundaries' fails for `partial-completion'
@@ -720,7 +675,8 @@ FRAME is the existing frame."
                            (not (and completing-file (equal (concat field "/") (car all))))
                            (test-completion str table pred)))
                   -1 0))
-    `((corfu--base . ,corfu--base)
+    `((corfu--input . ,input)
+      (corfu--base . ,corfu--base)
       (corfu--metadata . ,corfu--metadata)
       (corfu--candidates . ,all)
       (corfu--total . ,(length all))
@@ -745,11 +701,10 @@ FRAME is the existing frame."
       ;; without the user explicitly requesting it via M-TAB.
       (pcase (let ((non-essential t))
                (if interruptible
-                   (while-no-input (corfu--recompute str pt table pred))
-                 (corfu--recompute str pt table pred)))
+                   (while-no-input (corfu--compute input table pred))
+                 (corfu--compute input table pred)))
         ('nil (keyboard-quit))
         ((and state (pred consp))
-         (setq corfu--input input)
          (dolist (s state) (set (car s) (cdr s))))))
     input))
 
@@ -834,7 +789,7 @@ FRAME is the existing frame."
               (pt (point))
               (`(,beg ,end . ,_) completion-in-region--data))
     (and beg end
-         (eq buf (marker-buffer beg)) (eq buf (window-buffer))
+         (eq buf (marker-buffer end)) (eq buf (window-buffer))
          (<= beg pt end)
          (save-excursion (goto-char beg) (<= (pos-bol) pt (pos-eol))))))
 
@@ -854,7 +809,7 @@ the last command must be listed in `corfu-continue-commands'."
            ;; Check if it is an explicitly listed continue command
            (corfu--match-symbol-p corfu-continue-commands this-command)
            (pcase-let ((`(,beg ,end . ,_) completion-in-region--data))
-             (and (or (not corfu--input) (< beg end)) ;; Check for empty input
+             (and (or (equal (or (car corfu--input) "") "") (< beg end)) ;; Check for empty input
                   (or (not corfu-quit-at-boundary) ;; Check separator or predicate
                       (and (eq corfu-quit-at-boundary 'separator)
                            (or (eq this-command #'corfu-insert-separator)
@@ -923,9 +878,7 @@ the stack trace is shown in the *Messages* buffer."
    (lambda ()
      (if (corfu--continue-p)
          (corfu--exhibit)
-       (corfu-quit))
-     (when corfu-auto
-       (corfu--auto-post-command)))))
+       (corfu-quit)))))
 
 (defun corfu--goto (index)
   "Go to candidate with INDEX."
@@ -950,9 +903,11 @@ Lookup STR in CANDS to restore text properties."
 (defun corfu--setup (beg end table pred)
   "Setup Corfu completion state.
 See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
-  (setq beg (if (markerp beg) beg (copy-marker beg))
-        end (if (and (markerp end) (marker-insertion-type end)) end (copy-marker end t))
-        completion-in-region--data (list beg end table pred completion-extra-properties))
+  (when-let* ((state (plist-get completion-extra-properties :corfu--state)))
+    (plist-put completion-extra-properties :corfu--state nil)
+    (dolist (s state) (set (car s) (cdr s))))
+  (setq end (if (and (markerp end) (marker-insertion-type end)) end (copy-marker end t))
+        completion-in-region--data (list (+ 0 beg) end table pred completion-extra-properties))
   (completion-in-region-mode)
   (activate-change-group (setq corfu--change-group (prepare-change-group)))
   (setcdr (assq #'completion-in-region-mode minor-mode-overriding-map-alist) corfu-map)
@@ -980,7 +935,7 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
            (default-value 'completion-in-region-function))
          args))
 
-(defun corfu--in-region-1 (beg end table &optional pred)
+(defun corfu--in-region-1 (beg end table pred)
   "Complete in region, see `completion-in-region' for BEG, END, TABLE, PRED."
   (barf-if-buffer-read-only)
   ;; Restart the completion. This can happen for example if C-M-/
@@ -988,6 +943,7 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
   (when completion-in-region-mode (corfu-quit))
   (let* ((pt (max 0 (- (point) beg)))
          (str (buffer-substring-no-properties beg end))
+         (input (cons str pt))
          (md (completion-metadata (substring str 0 pt) table pred))
          (threshold (completion--cycle-threshold md))
          (completion-in-region-mode-predicate
@@ -1000,14 +956,13 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
               (corfu--setup beg end table pred)
             (corfu--exit-function
              str 'finished
-             (alist-get 'corfu--candidates (corfu--recompute str pt table pred))))
+             (alist-get 'corfu--candidates (corfu--compute input table pred))))
           t)
-      (`(,newstr . ,newpt)
-       (setq beg (if (markerp beg) beg (copy-marker beg))
-             end (copy-marker end t))
+      ((and newinp `(,newstr . ,newpt))
+       (setq end (copy-marker end t))
        (corfu--replace beg end newstr)
        (goto-char (+ beg newpt))
-       (let* ((state (corfu--recompute newstr newpt table pred))
+       (let* ((state (corfu--compute newinp table pred))
               (base (alist-get 'corfu--base state))
               (total (alist-get 'corfu--total state))
               (cands (alist-get 'corfu--candidates state)))
@@ -1052,49 +1007,6 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
     (define-key map [remap corfu-complete] replace)
     (define-key map (vector last-command-event) replace)
     (funcall replace)))
-
-(defun corfu--auto-complete-deferred (&optional tick)
-  "Initiate auto completion if TICK did not change."
-  (corfu--protect
-   (lambda ()
-     (when (and (not completion-in-region-mode)
-                (or (not tick) (equal tick (corfu--auto-tick))))
-       (pcase (while-no-input ;; Interruptible Capf query
-                (run-hook-wrapped 'completion-at-point-functions #'corfu--capf-wrapper))
-         (`(,fun ,beg ,end ,table . ,plist)
-          (let ((completion-in-region-mode-predicate
-                 (lambda ()
-                   (when-let* ((newbeg (car-safe (funcall fun))))
-                     (= newbeg beg))))
-                (completion-extra-properties plist))
-            (corfu--setup beg end table (plist-get plist :predicate))
-            (corfu--exhibit 'auto))))))))
-
-(defun corfu--auto-post-command ()
-  "Post command hook which initiates auto completion."
-  (corfu--protect
-   (lambda ()
-     (cancel-timer corfu--auto-timer)
-     (when (and (not completion-in-region-mode)
-                (not defining-kbd-macro)
-                (not buffer-read-only)
-                (corfu--match-symbol-p corfu-auto-commands this-command)
-                (corfu--popup-support-p))
-       (if (or (<= corfu-auto-delay 0)
-               (seq-contains-p corfu-auto-trigger last-command-event))
-           (corfu--auto-complete-deferred)
-         ;; Do not use `timer-set-idle-time' since this leads to
-         ;; unpredictable pauses, in particular with `flyspell-mode'.
-         (timer-set-time corfu--auto-timer
-                         (timer-relative-time nil corfu-auto-delay))
-         (timer-set-function corfu--auto-timer #'corfu--auto-complete-deferred
-                             (list (corfu--auto-tick)))
-         (timer-activate corfu--auto-timer))))))
-
-(defun corfu--auto-tick ()
-  "Return the current tick/status of the buffer.
-Auto completion is only performed if the tick did not change."
-  (list (selected-window) (current-buffer) (buffer-chars-modified-tick) (point)))
 
 (cl-defgeneric corfu--popup-show (pos off width lines &optional curr lo bar)
   "Show LINES as popup at POS - OFF.
@@ -1304,6 +1216,7 @@ there hasn't been any input, then quit."
     (pcase-let* ((`(,beg ,end . ,_) completion-in-region--data)
                  (str (buffer-substring-no-properties beg end)))
       (cancel-change-group corfu--change-group)
+      (goto-char end)
       (activate-change-group (setq corfu--change-group (prepare-change-group)))
       ;; Quit when resetting, when input did not change.
       (when (equal str (buffer-substring-no-properties beg end))
@@ -1455,10 +1368,12 @@ Quit if no candidate is selected."
   :group 'corfu :keymap corfu-mode-map
   (cond
    (corfu-mode
-    (and corfu-auto (add-hook 'post-command-hook #'corfu--auto-post-command nil 'local))
+    (when corfu-auto
+      (require 'corfu-auto)
+      (add-hook 'post-command-hook 'corfu-auto--post-command 10 'local))
     (setq-local completion-in-region-function #'corfu--in-region))
    (t
-    (remove-hook 'post-command-hook #'corfu--auto-post-command 'local)
+    (remove-hook 'post-command-hook 'corfu-auto--post-command 'local)
     (kill-local-variable 'completion-in-region-function))))
 
 (defcustom global-corfu-minibuffer t
@@ -1502,7 +1417,7 @@ local `completion-at-point-functions'."
 (defun corfu--capf-wrapper-advice (orig fun which)
   "Around advice for `completion--capf-wrapper'.
 The ORIG function takes the FUN and WHICH arguments."
-  (if corfu-mode (corfu--capf-wrapper fun t) (funcall orig fun which)))
+  (if corfu-mode (corfu--capf-wrapper fun) (funcall orig fun which)))
 
 (defun corfu--eldoc-advice ()
   "Return non-nil if Corfu is currently not active."
