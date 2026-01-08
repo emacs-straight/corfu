@@ -1,4 +1,4 @@
-This is docg5iLdp.info, produced by makeinfo version 7.1.1 from
+This is docB4SAkP.info, produced by makeinfo version 7.1.1 from
 corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docg5iLdp.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docB4SAkP.info,  Node: Top,  Next: Features,  Up: (dir)
 
 corfu.el - COmpletion in Region FUnction
 ****************************************
@@ -63,7 +63,7 @@ Configuration
 
 
 
-File: docg5iLdp.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
+File: docB4SAkP.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -93,7 +93,7 @@ File: docg5iLdp.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
      documentation in echo area, popup or separate buffer.
 
 
-File: docg5iLdp.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
+File: docB4SAkP.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up: Top
 
 2 Installation
 **************
@@ -106,7 +106,7 @@ press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
 by default for safety and unobtrusiveness.
 
 
-File: docg5iLdp.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
+File: docB4SAkP.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
 
 3 Key bindings
 **************
@@ -135,7 +135,7 @@ Binding/Remapping              Corfu command
 ‘keyboard-escape-quit’         ‘corfu-reset’
 
 
-File: docg5iLdp.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
+File: docB4SAkP.info,  Node: Configuration,  Next: Extensions,  Prev: Key bindings,  Up: Top
 
 4 Configuration
 ***************
@@ -267,7 +267,7 @@ completion in the Elisp manual
 * Transfer completion to the minibuffer::
 
 
-File: docg5iLdp.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docB4SAkP.info,  Node: Auto completion,  Next: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.1 Auto completion
 ===================
@@ -315,7 +315,7 @@ load on the Lisp runtime and garbage collector.
                              completion-category-defaults nil)))
 
 
-File: docg5iLdp.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
+File: docB4SAkP.info,  Node: Buffer-local/Corfu-only completion styles,  Next: Completing in the minibuffer,  Prev: Auto completion,  Up: Configuration
 
 4.2 Buffer-local/Corfu-only completion styles
 =============================================
@@ -369,7 +369,7 @@ than 4 characters.
                              completion-category-defaults nil)))
 
 
-File: docg5iLdp.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
+File: docB4SAkP.info,  Node: Completing in the minibuffer,  Next: Completing in the Eshell or Shell,  Prev: Buffer-local/Corfu-only completion styles,  Up: Configuration
 
 4.3 Completing in the minibuffer
 ================================
@@ -380,7 +380,7 @@ of the Emacs frame and can be shown even if it doesn't fit inside the
 minibuffer.
 
    ‘global-corfu-mode’ activates ‘corfu-mode’ in the minibuffer if the
-variable ‘global-corfu-minibuffer’ is non-nil.  In order to avoid
+variable ‘global-corfu-minibuffer’ is ‘t’.  In order to avoid
 interference with specialised minibuffer completion UIs like Vertico or
 Mct, Corfu is only enabled if the minibuffer sets the variable
 ‘completion-at-point-functions’ locally.  This way minibuffers with
@@ -401,7 +401,7 @@ enabled if a password is read from the minibuffer.
                       (eq (current-local-map) read-passwd-map)))))
 
 
-File: docg5iLdp.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
+File: docB4SAkP.info,  Node: Completing in the Eshell or Shell,  Next: Orderless completion,  Prev: Completing in the minibuffer,  Up: Configuration
 
 4.4 Completing in the Eshell or Shell
 =====================================
@@ -436,7 +436,7 @@ worked around using the Cape (https://github.com/minad/cape) library
 Pcomplete issues, please report them upstream.
 
 
-File: docg5iLdp.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
+File: docB4SAkP.info,  Node: Orderless completion,  Next: TAB-only completion,  Prev: Completing in the Eshell or Shell,  Up: Configuration
 
 4.5 Orderless completion
 ========================
@@ -502,7 +502,7 @@ components.
        (global-corfu-mode))
 
 
-File: docg5iLdp.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
+File: docB4SAkP.info,  Node: TAB-only completion,  Next: TAB-and-Go completion,  Prev: Orderless completion,  Up: Configuration
 
 4.6 TAB-only completion
 =======================
@@ -534,7 +534,7 @@ or reserve the ‘RET’ key only in shell modes using a menu-item filter.
                                               #'corfu-send)))))
 
 
-File: docg5iLdp.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
+File: docB4SAkP.info,  Node: TAB-and-Go completion,  Next: Transfer completion to the minibuffer,  Prev: TAB-only completion,  Up: Configuration
 
 4.7 TAB-and-Go completion
 =========================
@@ -564,7 +564,7 @@ candidate explicitly with ‘RET’.
        (global-corfu-mode))
 
 
-File: docg5iLdp.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
+File: docB4SAkP.info,  Node: Transfer completion to the minibuffer,  Prev: TAB-and-Go completion,  Up: Configuration
 
 4.8 Transfer completion to the minibuffer
 =========================================
@@ -594,7 +594,7 @@ via ‘completing-read’.
      (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
 
 
-File: docg5iLdp.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
+File: docB4SAkP.info,  Node: Extensions,  Next: Complementary packages,  Prev: Configuration,  Up: Top
 
 5 Extensions
 ************
@@ -608,6 +608,9 @@ desired.  Furthermore it is possible to install all of the files
 separately, both ‘corfu.el’ and the ‘corfu-*.el’ extensions.  Currently
 the following extensions come with the Corfu ELPA package:
 
+   • corfu-auto
+     (https://github.com/minad/corfu/blob/main/extensions/corfu-auto.el):
+     Auto completion is enabled if ‘corfu-auto’ is set to ‘t’.
    • corfu-echo
      (https://github.com/minad/corfu/blob/main/extensions/corfu-echo.el):
      ‘corfu-echo-mode’ displays a brief candidate documentation in the
@@ -634,7 +637,7 @@ the following extensions come with the Corfu ELPA package:
    See the Commentary of those files for configuration details.
 
 
-File: docg5iLdp.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
+File: docB4SAkP.info,  Node: Complementary packages,  Next: Alternatives,  Prev: Extensions,  Up: Top
 
 6 Complementary packages
 ************************
@@ -681,7 +684,7 @@ look into complementary packages to enhance your setup.
      counterpart of Corfu.
 
 
-File: docg5iLdp.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
+File: docB4SAkP.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complementary packages,  Up: Top
 
 7 Alternatives
 **************
@@ -714,7 +717,7 @@ File: docg5iLdp.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Comple
      ‘consult-completion-in-region’ is your best option.
 
 
-File: docg5iLdp.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: docB4SAkP.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -734,7 +737,7 @@ The completion log messages are added to the ‘*Messages*’ buffer.
 the Capfs must be fixed there, since Corfu cannot work around them.
 
 
-File: docg5iLdp.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
+File: docB4SAkP.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
 
 9 Contributions
 ***************
@@ -760,10 +763,10 @@ Node: TAB-only completion22444
 Node: TAB-and-Go completion23817
 Node: Transfer completion to the minibuffer24911
 Node: Extensions26336
-Node: Complementary packages28151
-Node: Alternatives30463
-Node: Debugging Corfu32255
-Node: Contributions33102
+Node: Complementary packages28314
+Node: Alternatives30626
+Node: Debugging Corfu32418
+Node: Contributions33265
 
 End Tag Table
 
