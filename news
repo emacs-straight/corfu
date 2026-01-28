@@ -1,0 +1,148 @@
+                         ━━━━━━━━━━━━━━━━━━━━━━
+                          CORFU.EL - CHANGELOG
+                         ━━━━━━━━━━━━━━━━━━━━━━
+
+
+1 Version 2.8 (2026-01-18)
+══════════════════════════
+
+  • Auto completion code factored out to `corfu-auto.el'.
+  • Overall code simplifications.
+  • Optimized completion of non-exclusive Capfs.
+  • Use `when-let*' instead of `when-let'.
+
+
+2 Version 2.7 (2025-12-28)
+══════════════════════════
+
+  • `corfu-popupinfo-hide': Change default to nil.
+  • `corfu-popupinfo-delay': Reduce delay when changing candidates to
+    0.5.
+  • `corfu-popupinfo-margin-width': New customization variable.
+  • `corfu-border-width': New customization variable.
+  • `corfu-popupinfo': Faster scrolling speed.
+  • `corfu-popupinfo': Fix Emacs 30 deprecation warning.
+  • Fix Corfu popup position at the right edge of the parent frame.
+  • Work around Emacs bug#79792, where the `*Help*' buffer is replaced
+    unexpectedly.
+  • Use new function `set-frame-size-and-position-pixelwise' on Emacs
+    31.
+
+
+3 Version 2.6 (2025-12-07)
+══════════════════════════
+
+  • Bugfixes.
+  • Add name to Corfu child frame to improve readability of
+    `(frame-list)'.
+  • TTY: Fix child frame misalignment due to internal border.
+  • TTY: Hide frame immediately.
+  • TTY: Adjust default faces for low-color terminals.
+
+
+4 Version 2.5 (2025-11-15)
+══════════════════════════
+
+  • `corfu-auto-trigger': New customization variable to trigger
+    immediate completion after certain characters. See also
+    `cape-capf-trigger'.
+  • `corfu-on-exact-match': Change default from `insert' to `nil', which
+    is more compatible with auto completion and
+    template/snippet/abbreviation expansion.
+  • Improve compatibility with Eglot. Fix a manual completion bug in the
+    case when Eglot provided no matching candidates.
+  • Experimental: Use new function `set-frame-position-and-size' if
+    available.
+
+
+5 Version 2.4 (2025-10-13)
+══════════════════════════
+
+  • Require Emacs 29.1.
+  • Handle mixed tty/graphical displays.
+  • Do not enable Corfu in read-only buffers.
+
+
+6 Version 2.3 (2025-06-12)
+══════════════════════════
+
+  • Minor corrections and fixes.
+
+
+7 Version 2.2 (2025-05-26)
+══════════════════════════
+
+  • Guard Corfu hooks to automatically print stack traces in order to
+    ease debugging.
+
+
+8 Version 2.1 (2025-04-22)
+══════════════════════════
+
+  • `corfu-history-duplicate' and `corfu-history-decay': New
+    customization options to adjust the rank of duplicate history
+    elements, such that they appear earlier in the completion list.
+  • `corfu-history-mode': Add `corfu-history' to
+    `savehist-minibuffer-history-variables' in order to save the history
+    if `savehist-mode' is enabled.
+
+
+9 Version 2.0 (2025-03-28)
+══════════════════════════
+
+  • `corfu-quick': Ensure that popup does not move.
+
+
+10 Version 1.7 (2025-01-28)
+═══════════════════════════
+
+  • Bugfixes only.
+
+
+11 Version 1.6 (2024-12-22)
+═══════════════════════════
+
+  • Require Emacs 28.1.
+  • Use fringe to display scroll bar. This change improves performance
+    and makes sure that the scroll bar cannot be pushed outside the
+    child frame by the content. This affects for example `cape-emoji'.
+  • Improve suffix alignment.
+  • Remember popup width during completion to avoid width
+    fluctuations. Basically the popup is only allowed to grow.
+  • `corfu-insert-separator': Jump back to prompt if a candidate is
+    previewed.
+
+
+12 Version 1.5 (2024-07-26)
+═══════════════════════════
+
+  • New customization variable `global-corfu-minibuffer' to enable Corfu
+    in the minibuffer.
+  • Unbind `C-a' in `corfu-map'. This binding is only needed in modes
+    which override `C-a' instead of remapping `move-beginning-of-line'.
+  • Unbind `<tab>' in `corfu-map'. This binding is only needed in modes
+    which bind `<tab>' instead of `TAB', as was the case in old versions
+    of Org. If you use such a mode, please report this as a bug for this
+    mode. In the meantime you can use `(keymap-set corfu-map "<tab>"
+    #'corfu-complete)'.
+  • Add new command `corfu-send' as alternative to `corfu-insert'.
+  • `corfu-popupinfo': Support both `face' and `font-lock-face'
+    highlighting.
+  • Bump Compat dependency to Compat 30.
+
+
+13 Version 1.4 (2024-05-23)
+═══════════════════════════
+
+  • `corfu-auto-commands': Add `delete-backward-char'.
+
+
+14 Version 1.3 (2024-04-05)
+═══════════════════════════
+
+  • Preserve currently selected candidate on further input. This matters
+    if candidate preview is disabled (`corfu-preview-current=nil').
+  • Add new command `corfu-expand' bound to `M-TAB' by default. The
+    command expands the input via `completion-try-completion', for
+    example the `basic' completion
+  …  …
