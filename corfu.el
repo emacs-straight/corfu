@@ -420,7 +420,6 @@ the initial completion state.  PREFIX is the minimum prefix length."
 ;; Not present on non-gtk/non-x builds
 (defvar x-gtk-resize-child-frames)
 (defvar x-fast-protocol-requests)
-(defvar x-wait-for-event-timeout)
 
 ;; Function adapted from posframe.el by tumashu
 (defun corfu--make-frame (frame x y width height)
@@ -433,7 +432,6 @@ FRAME is the existing frame."
   (let* ((window-min-height 1)
          (window-min-width 1)
          (inhibit-redisplay t)
-         (x-wait-for-event-timeout)
          (x-fast-protocol-requests t)
          (x-gtk-resize-child-frames corfu--gtk-resize-child-frames)
          (before-make-frame-hook)
@@ -493,14 +491,21 @@ FRAME is the existing frame."
       ;; Mark window as dedicated to prevent frame reuse (gh:minad/corfu#60)
       (set-window-dedicated-p win t))
     (redirect-frame-focus frame parent)
-    (pcase-let ((`(,px . ,py) (frame-position frame)))
+    (pcase-let* ((`(,ox ,oy ,right ,bottom) (frame-edges frame 'outer-edges))
+                 (border (* 2 corfu-border-width))
+                 (ow (- (- right ox) left-fringe-width right-fringe-width border))
+                 (oh (- (- bottom oy) border))
+                 (pos-change (or (/= x ox) (/= y oy)))
+                 (size-change (or (/= ow width) (/= oh height))))
       (cond
-       ((and (= x px) (= y py)) (set-frame-size frame width height t))
-       ;; New Emacs 31 function for faster resizing/movement in one go.
-       ((fboundp 'set-frame-size-and-position-pixelwise)
-        (set-frame-size-and-position-pixelwise frame width height x y))
-       (t (set-frame-size frame width height t)
-          (set-frame-position frame x y)))))
+       ((and pos-change size-change)
+        ;; New Emacs 31 function for faster resizing/movement in one go.
+        (static-if (fboundp 'set-frame-size-and-position-pixelwise)
+            (set-frame-size-and-position-pixelwise frame width height x y)
+          (set-frame-size frame width height t)
+          (set-frame-position frame x y)))
+       (pos-change (set-frame-position frame x y))
+       (size-change (set-frame-size frame width height t)))))
   (make-frame-visible frame)
   ;; Unparent child frame if EXWM is used, otherwise EXWM buffers are drawn on
   ;; top of the Corfu child frame.
