@@ -45,7 +45,6 @@ versions.
 * Complementary packages::
 * Alternatives::
 * Debugging Corfu::
-* Contributions::
 
 -- The Detailed Node Listing --
 
@@ -96,12 +95,11 @@ File: corfu.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up
 2 Installation
 **************
 
-Corfu is available from GNU ELPA
-(https://elpa.gnu.org/packages/corfu.html).  You can install it directly
-via ‘M-x package-install RET corfu RET’.  After installation, activate
-the global minor mode with ‘M-x global-corfu-mode RET’.  For completion
-press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
-by default for safety and unobtrusiveness.
+Corfu is available from MELPA and can be installed via ‘M-x
+package-install RET corfu RET’.  After installation, activate the global
+minor mode with ‘M-x global-corfu-mode RET’.  For completion press
+‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled by
+default for safety and unobtrusiveness.
 
 
 File: corfu.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
@@ -600,11 +598,11 @@ File: corfu.info,  Node: Extensions,  Next: Complementary packages,  Prev: Confi
 We maintain small extension packages to Corfu in this repository in the
 subdirectory extensions/
 (https://github.com/minad/corfu/tree/main/extensions).  The extensions
-are installed together with Corfu if you pull the package from ELPA.
+are installed together with Corfu if you pull the package from MELPA.
 The extensions are inactive by default and can be enabled manually if
 desired.  Furthermore it is possible to install all of the files
 separately, both ‘corfu.el’ and the ‘corfu-*.el’ extensions.  Currently
-the following extensions come with the Corfu ELPA package:
+the following extensions come with the Corfu package:
 
    • corfu-auto
      (https://github.com/minad/corfu/blob/main/extensions/corfu-auto.el):
@@ -715,7 +713,7 @@ File: corfu.info,  Node: Alternatives,  Next: Debugging Corfu,  Prev: Complement
      ‘consult-completion-in-region’ is your best option.
 
 
-File: corfu.info,  Node: Debugging Corfu,  Next: Contributions,  Prev: Alternatives,  Up: Top
+File: corfu.info,  Node: Debugging Corfu,  Prev: Alternatives,  Up: Top
 
 8 Debugging Corfu
 *****************
@@ -735,35 +733,24 @@ The completion log messages are added to the ‘*Messages*’ buffer.
 the Capfs must be fixed there, since Corfu cannot work around them.
 
 
-File: corfu.info,  Node: Contributions,  Prev: Debugging Corfu,  Up: Top
-
-9 Contributions
-***************
-
-Since this package is part of GNU ELPA
-(https://elpa.gnu.org/packages/corfu.html) contributions require a
-copyright assignment to the FSF.
-
-
 Tag Table:
 Node: Top204
-Node: Features2153
-Node: Installation3599
-Node: Key bindings4099
-Node: Configuration5434
-Node: Auto completion11450
-Node: Buffer-local/Corfu-only completion styles13579
-Node: Completing in the minibuffer15978
-Node: Completing in the Eshell or Shell17527
-Node: Orderless completion19324
-Node: TAB-only completion22397
-Node: TAB-and-Go completion23766
-Node: Transfer completion to the minibuffer24856
-Node: Extensions26277
-Node: Complementary packages28251
-Node: Alternatives30559
-Node: Debugging Corfu32347
-Node: Contributions33190
+Node: Features2135
+Node: Installation3581
+Node: Key bindings4026
+Node: Configuration5361
+Node: Auto completion11377
+Node: Buffer-local/Corfu-only completion styles13506
+Node: Completing in the minibuffer15905
+Node: Completing in the Eshell or Shell17454
+Node: Orderless completion19251
+Node: TAB-only completion22324
+Node: TAB-and-Go completion23693
+Node: Transfer completion to the minibuffer24783
+Node: Extensions26204
+Node: Complementary packages28174
+Node: Alternatives30482
+Node: Debugging Corfu32270
 
 End Tag Table
 
