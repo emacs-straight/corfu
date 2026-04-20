@@ -3,13 +3,19 @@
                          ━━━━━━━━━━━━━━━━━━━━━━
 
 
-1 Version 2.9 (2026-03-09)
+1 Development
+═════════════
+
+  • Improve deduplication of candidates.
+
+
+2 Version 2.9 (2026-03-09)
 ══════════════════════════
 
   • Optimize frame repositioning.
 
 
-2 Version 2.8 (2026-01-18)
+3 Version 2.8 (2026-01-18)
 ══════════════════════════
 
   • Auto completion code factored out to `corfu-auto.el'.
@@ -18,7 +24,7 @@
   • Use `when-let*' instead of `when-let'.
 
 
-3 Version 2.7 (2025-12-28)
+4 Version 2.7 (2025-12-28)
 ══════════════════════════
 
   • `corfu-popupinfo-hide': Change default to nil.
@@ -35,7 +41,7 @@
     31.
 
 
-4 Version 2.6 (2025-12-07)
+5 Version 2.6 (2025-12-07)
 ══════════════════════════
 
   • Bugfixes.
@@ -46,7 +52,7 @@
   • TTY: Adjust default faces for low-color terminals.
 
 
-5 Version 2.5 (2025-11-15)
+6 Version 2.5 (2025-11-15)
 ══════════════════════════
 
   • `corfu-auto-trigger': New customization variable to trigger
@@ -61,7 +67,7 @@
     available.
 
 
-6 Version 2.4 (2025-10-13)
+7 Version 2.4 (2025-10-13)
 ══════════════════════════
 
   • Require Emacs 29.1.
@@ -69,21 +75,21 @@
   • Do not enable Corfu in read-only buffers.
 
 
-7 Version 2.3 (2025-06-12)
+8 Version 2.3 (2025-06-12)
 ══════════════════════════
 
   • Minor corrections and fixes.
 
 
-8 Version 2.2 (2025-05-26)
+9 Version 2.2 (2025-05-26)
 ══════════════════════════
 
   • Guard Corfu hooks to automatically print stack traces in order to
     ease debugging.
 
 
-9 Version 2.1 (2025-04-22)
-══════════════════════════
+10 Version 2.1 (2025-04-22)
+═══════════════════════════
 
   • `corfu-history-duplicate' and `corfu-history-decay': New
     customization options to adjust the rank of duplicate history
@@ -93,19 +99,19 @@
     if `savehist-mode' is enabled.
 
 
-10 Version 2.0 (2025-03-28)
+11 Version 2.0 (2025-03-28)
 ═══════════════════════════
 
   • `corfu-quick': Ensure that popup does not move.
 
 
-11 Version 1.7 (2025-01-28)
+12 Version 1.7 (2025-01-28)
 ═══════════════════════════
 
   • Bugfixes only.
 
 
-12 Version 1.6 (2024-12-22)
+13 Version 1.6 (2024-12-22)
 ═══════════════════════════
 
   • Require Emacs 28.1.
@@ -119,7 +125,7 @@
     previewed.
 
 
-13 Version 1.5 (2024-07-26)
+14 Version 1.5 (2024-07-26)
 ═══════════════════════════
 
   • New customization variable `global-corfu-minibuffer' to enable Corfu
@@ -137,17 +143,15 @@
   • Bump Compat dependency to Compat 30.
 
 
-14 Version 1.4 (2024-05-23)
+15 Version 1.4 (2024-05-23)
 ═══════════════════════════
 
   • `corfu-auto-commands': Add `delete-backward-char'.
 
 
-15 Version 1.3 (2024-04-05)
+16 Version 1.3 (2024-04-05)
 ═══════════════════════════
 
   • Preserve currently selected candidate on further input. This matters
     if candidate preview is disabled (`corfu-preview-current=nil').
-  • Add new command `corfu-expand' bound to `M-TAB' by default. The
-    command expands
   …  …
