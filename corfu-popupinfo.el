@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 2.9
-;; Package-Requires: ((emacs "29.1") (compat "30") (corfu "2.9"))
+;; Package-Requires: ((emacs "29.1") (compat "31") (corfu "2.9"))
 ;; URL: https://github.com/minad/corfu
 
 ;; This file is part of GNU Emacs.
@@ -373,7 +373,7 @@ form (X Y WIDTH HEIGHT DIR)."
                 (insert content)
                 (goto-char (point-min)))
               (dolist (var corfu-popupinfo--buffer-parameters)
-                (set (make-local-variable (car var)) (cdr var)))
+                (set-local (car var) (cdr var)))
               (setq left-margin-width corfu-popupinfo-margin-width
                     right-margin-width corfu-popupinfo-margin-width)
               (when-let* ((m (memq 'corfu-default (alist-get 'default face-remapping-alist))))

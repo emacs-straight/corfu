@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
 ;; Version: 2.9
-;; Package-Requires: ((emacs "29.1") (compat "30"))
+;; Package-Requires: ((emacs "29.1") (compat "31"))
 ;; URL: https://github.com/minad/corfu
 ;; Keywords: abbrev, convenience, matching, completion, text
 
@@ -398,7 +398,7 @@ the initial completion state.  PREFIX is the minimum prefix length."
       ;;; XXX HACK install mouse ignore map
       (use-local-map corfu--mouse-ignore-map)
       (dolist (var corfu--buffer-parameters)
-        (set (make-local-variable (car var)) (cdr var)))
+        (set-local (car var) (cdr var)))
       (setq-local face-remapping-alist (copy-tree fr)
                   line-spacing ls)
       (cl-pushnew 'corfu-default (alist-get 'default face-remapping-alist))
@@ -499,7 +499,8 @@ FRAME is the existing frame."
                  (size-change (or (/= ow width) (/= oh height))))
       (cond
        ((and pos-change size-change)
-        ;; New Emacs 31 function for faster resizing/movement in one go.
+        ;; TODO: New Emacs 31 function for faster resizing/movement in one go.
+        ;; Add this function to Compat 31 as backport.
         (static-if (fboundp 'set-frame-size-and-position-pixelwise)
             (set-frame-size-and-position-pixelwise frame width height x y)
           (set-frame-size frame width height t)
