@@ -95,7 +95,8 @@ File: corfu.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up
 2 Installation
 **************
 
-Corfu is available from MELPA and can be installed via ‘M-x
+Corfu is available from ELPA (https://elpa.gnu.org/packages/corfu.html)
+or MELPA (https://melpa.org/#/corfu) and can be installed via ‘M-x
 package-install RET corfu RET’.  After installation, activate the global
 minor mode with ‘M-x global-corfu-mode RET’.  For completion press
 ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled by
@@ -598,11 +599,11 @@ File: corfu.info,  Node: Extensions,  Next: Complementary packages,  Prev: Confi
 We maintain small extension packages to Corfu in this repository in the
 subdirectory extensions/
 (https://github.com/minad/corfu/tree/main/extensions).  The extensions
-are installed together with Corfu if you pull the package from MELPA.
-The extensions are inactive by default and can be enabled manually if
-desired.  Furthermore it is possible to install all of the files
-separately, both ‘corfu.el’ and the ‘corfu-*.el’ extensions.  Currently
-the following extensions come with the Corfu package:
+are installed together with Corfu.  The extensions are inactive by
+default and can be enabled manually if desired.  Furthermore it is
+possible to install all of the files separately, both ‘corfu.el’ and the
+‘corfu-*.el’ extensions.  Currently the following extensions come with
+the Corfu package:
 
    • corfu-auto
      (https://github.com/minad/corfu/blob/main/extensions/corfu-auto.el):
@@ -737,20 +738,20 @@ Tag Table:
 Node: Top204
 Node: Features2135
 Node: Installation3581
-Node: Key bindings4026
-Node: Configuration5361
-Node: Auto completion11377
-Node: Buffer-local/Corfu-only completion styles13506
-Node: Completing in the minibuffer15905
-Node: Completing in the Eshell or Shell17454
-Node: Orderless completion19251
-Node: TAB-only completion22324
-Node: TAB-and-Go completion23693
-Node: Transfer completion to the minibuffer24783
-Node: Extensions26204
-Node: Complementary packages28174
-Node: Alternatives30482
-Node: Debugging Corfu32270
+Node: Key bindings4105
+Node: Configuration5440
+Node: Auto completion11456
+Node: Buffer-local/Corfu-only completion styles13585
+Node: Completing in the minibuffer15984
+Node: Completing in the Eshell or Shell17533
+Node: Orderless completion19330
+Node: TAB-only completion22403
+Node: TAB-and-Go completion23772
+Node: Transfer completion to the minibuffer24862
+Node: Extensions26283
+Node: Complementary packages28219
+Node: Alternatives30527
+Node: Debugging Corfu32315
 
 End Tag Table
 
