@@ -1,4 +1,4 @@
-This is corfu.info, produced by makeinfo version 7.2 from corfu.texi.
+This is corfu.info, produced by makeinfo version 7.1.1 from corfu.texi.
 
 INFO-DIR-SECTION Emacs misc features
 START-INFO-DIR-ENTRY
@@ -58,6 +58,7 @@ Configuration
 * TAB-only completion::
 * TAB-and-Go completion::
 * Transfer completion to the minibuffer::
+
 
 
 File: corfu.info,  Node: Features,  Next: Installation,  Prev: Top,  Up: Top
@@ -733,30 +734,30 @@ The completion log messages are added to the ‘*Messages*’ buffer.
    Sometimes you will find errors inside Capfs.  Such errors are bugs in
 the Capfs must be fixed there, since Corfu cannot work around them.
 
+
 
 Tag Table:
-Node: Top204
-Node: Features2135
-Node: Installation3581
-Node: Key bindings4105
-Node: Configuration5440
-Node: Auto completion11456
-Node: Buffer-local/Corfu-only completion styles13585
-Node: Completing in the minibuffer15984
-Node: Completing in the Eshell or Shell17533
-Node: Orderless completion19330
-Node: TAB-only completion22403
-Node: TAB-and-Go completion23772
-Node: Transfer completion to the minibuffer24862
-Node: Extensions26283
-Node: Complementary packages28219
-Node: Alternatives30527
-Node: Debugging Corfu32315
+Node: Top206
+Node: Features2138
+Node: Installation3584
+Node: Key bindings4108
+Node: Configuration5443
+Node: Auto completion11459
+Node: Buffer-local/Corfu-only completion styles13588
+Node: Completing in the minibuffer15987
+Node: Completing in the Eshell or Shell17536
+Node: Orderless completion19333
+Node: TAB-only completion22406
+Node: TAB-and-Go completion23775
+Node: Transfer completion to the minibuffer24865
+Node: Extensions26286
+Node: Complementary packages28222
+Node: Alternatives30530
+Node: Debugging Corfu32318
 
 End Tag Table
 
 
 Local Variables:
 coding: utf-8
-Info-documentlanguage: en
 End:
