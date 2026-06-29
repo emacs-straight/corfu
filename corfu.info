@@ -97,11 +97,11 @@ File: corfu.info,  Node: Installation,  Next: Key bindings,  Prev: Features,  Up
 **************
 
 Corfu is available from ELPA (https://elpa.gnu.org/packages/corfu.html)
-or MELPA (https://melpa.org/#/corfu) and can be installed via ‘M-x
-package-install RET corfu RET’.  After installation, activate the global
-minor mode with ‘M-x global-corfu-mode RET’.  For completion press
-‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled by
-default for safety and unobtrusiveness.
+or MELPA (https://releases.melpa.org/#/corfu) and can be installed via
+‘M-x package-install RET corfu RET’.  After installation, activate the
+global minor mode with ‘M-x global-corfu-mode RET’.  For completion
+press ‘M-TAB’ (or ‘TAB’) within a buffer.  Auto completion is disabled
+by default for safety and unobtrusiveness.
 
 
 File: corfu.info,  Node: Key bindings,  Next: Configuration,  Prev: Installation,  Up: Top
@@ -740,20 +740,20 @@ Tag Table:
 Node: Top206
 Node: Features2138
 Node: Installation3584
-Node: Key bindings4108
-Node: Configuration5443
-Node: Auto completion11459
-Node: Buffer-local/Corfu-only completion styles13588
-Node: Completing in the minibuffer15987
-Node: Completing in the Eshell or Shell17536
-Node: Orderless completion19333
-Node: TAB-only completion22406
-Node: TAB-and-Go completion23775
-Node: Transfer completion to the minibuffer24865
-Node: Extensions26286
-Node: Complementary packages28222
-Node: Alternatives30530
-Node: Debugging Corfu32318
+Node: Key bindings4117
+Node: Configuration5452
+Node: Auto completion11468
+Node: Buffer-local/Corfu-only completion styles13597
+Node: Completing in the minibuffer15996
+Node: Completing in the Eshell or Shell17545
+Node: Orderless completion19342
+Node: TAB-only completion22415
+Node: TAB-and-Go completion23784
+Node: Transfer completion to the minibuffer24874
+Node: Extensions26295
+Node: Complementary packages28231
+Node: Alternatives30539
+Node: Debugging Corfu32327
 
 End Tag Table
 

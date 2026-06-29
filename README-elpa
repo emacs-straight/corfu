@@ -95,7 +95,7 @@ Table of Contents
 
 [ELPA] <https://elpa.gnu.org/packages/corfu.html>
 
-[MELPA] <https://melpa.org/#/corfu>
+[MELPA] <https://releases.melpa.org/#/corfu>
 
 
 3 Key bindings
