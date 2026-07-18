@@ -155,11 +155,9 @@ It is recommended to avoid changing these parameters.")
 (defvar corfu-popupinfo--candidate nil
   "Completion candidate for the info popup.")
 
-(defvar corfu-popupinfo--coordinates nil
-  "Coordinates of the candidate popup.
-The coordinates list has the form (LEFT TOP RIGHT BOTTOM) where
-all values are in pixels relative to the origin.  See
-`frame-edges' for details.")
+(defvar corfu-popupinfo--geometry nil
+  "Geometry of the candidate popup.
+The list has the form (LEFT TOP WIDTH HIEGHT) with the values in pixels.")
 
 (defvar corfu-popupinfo--lock-dir nil
   "Locked position direction of the info popup.")
@@ -171,7 +169,7 @@ all values are in pixels relative to the origin.  See
   (mapcar
    (lambda (k) (cons k (symbol-value k)))
    '(corfu-popupinfo--candidate
-     corfu-popupinfo--coordinates
+     corfu-popupinfo--geometry
      corfu-popupinfo--lock-dir
      corfu-popupinfo--toggle
      corfu-popupinfo--function))
@@ -222,6 +220,8 @@ all values are in pixels relative to the origin.  See
                       (jit-lock-fontify-now beg (point)))
                     (let ((res (buffer-substring beg (point))))
                       (and (not (string-blank-p res)) res)))))))
+        (when (and (bound-and-true-p hl-line-mode) (fboundp 'hl-line-highlight))
+          (hl-line-highlight))
         (when (and buffer (not (memq buffer old-buffers)))
           (kill-buffer buffer))))))
 
@@ -239,6 +239,8 @@ all values are in pixels relative to the origin.  See
                                (print-length (* corfu-popupinfo-max-width
                                                 corfu-popupinfo-max-height)))
                        (funcall fun candidate)))))
+    (when (and (bound-and-true-p hl-line-mode) (fboundp 'hl-line-highlight))
+      (hl-line-highlight))
     (with-current-buffer (or (car-safe res) res)
       (setq res (string-trim
                  (replace-regexp-in-string
@@ -281,13 +283,6 @@ all values are in pixels relative to the origin.  See
      (- (frame-pixel-width corfu-popupinfo--frame) border)
      (- (frame-pixel-height corfu-popupinfo--frame) border))))
 
-(defun corfu-popupinfo--frame-geometry (frame)
-  "Return position and size geometric attributes of FRAME.
-The geometry represents the position and size in pixels
-in the form of (X Y WIDTH HEIGHT)."
-  (pcase-let ((`(,x . ,y) (frame-position frame)))
-    (list x y (frame-pixel-width frame) (frame-pixel-height frame))))
-
 (defun corfu-popupinfo--fits-p (size area)
   "Check if SIZE fits into the AREA.
 SIZE is in the form (WIDTH . HEIGHT).
@@ -307,9 +302,14 @@ area and vertical area."
       ((lh (default-line-height))
        (`(,pw . ,ph) ps)
        (border (if (display-graphic-p corfu--frame) corfu-border-width 0))
-       (`(,_pfx ,_pfy ,pfw ,pfh)
-        (corfu-popupinfo--frame-geometry (frame-parent corfu--frame)))
-       (`(,cfx ,cfy ,cfw ,cfh) (corfu-popupinfo--frame-geometry corfu--frame))
+       (parent (frame-parent corfu--frame))
+       (pfw (frame-pixel-width parent))
+       (pfh (frame-pixel-height parent))
+       (`(,cfx ,cfy ,cfw ,cfh) (frame-parameter corfu--frame 'corfu--geometry))
+       (cfw (+ cfw (* 2 border)
+               (frame-parameter corfu--frame 'left-fringe)
+               (frame-parameter corfu--frame 'right-fringe)))
+       (cfh (+ cfh (* 2 border)))
        ;; Candidates popup below input
        (below (>= cfy (+ lh (cadr (window-inside-pixel-edges))
                          (window-tab-line-height)
@@ -363,8 +363,8 @@ form (X Y WIDTH HEIGHT DIR)."
     (let* ((cand-changed
             (not (and (corfu-popupinfo--visible-p)
                       (equal-including-properties candidate corfu-popupinfo--candidate))))
-           (new-coords (frame-edges corfu--frame 'inner-edges))
-           (coords-changed (not (equal new-coords corfu-popupinfo--coordinates))))
+           (new-geo (frame-parameter corfu--frame 'corfu--geometry))
+           (geo-changed (not (equal new-geo corfu-popupinfo--geometry))))
       (when cand-changed
         (if-let* ((content (funcall corfu-popupinfo--function candidate)))
             (with-current-buffer (corfu--make-buffer corfu-popupinfo--buffer)
@@ -379,13 +379,12 @@ form (X Y WIDTH HEIGHT DIR)."
               (when-let* ((m (memq 'corfu-default (alist-get 'default face-remapping-alist))))
                 (setcar m 'corfu-popupinfo)))
           (corfu-popupinfo--hide)
-          (setq cand-changed nil coords-changed nil)))
-      (when (or cand-changed coords-changed)
+          (setq cand-changed nil geo-changed nil)))
+      (when (or cand-changed geo-changed)
         (pcase-let* ((`(,area-x ,area-y ,area-w ,area-h ,area-d)
-                      (corfu-popupinfo--area
-                       (if cand-changed
-                           (corfu-popupinfo--compute-size)
-                         (corfu-popupinfo--last-size))))
+                      (corfu-popupinfo--area (if cand-changed
+                                                 (corfu-popupinfo--compute-size)
+                                               (corfu-popupinfo--last-size))))
                      (old-frame corfu-popupinfo--frame))
           (setq corfu-popupinfo--frame
                 (with-current-buffer corfu-popupinfo--buffer
@@ -394,7 +393,7 @@ form (X Y WIDTH HEIGHT DIR)."
                 corfu-popupinfo--toggle t
                 corfu-popupinfo--lock-dir area-d
                 corfu-popupinfo--candidate candidate
-                corfu-popupinfo--coordinates new-coords)
+                corfu-popupinfo--geometry new-geo)
           ;; XXX HACK: Force margin update. For some reason, the call to
           ;; `set-window-buffer' in `corfu--make-frame' is not effective the
           ;; first time. Why does Emacs have all these quirks?
@@ -501,7 +500,9 @@ not be displayed until this command is called again, even if
       (cancel-timer corfu-popupinfo--timer)
       (setq corfu-popupinfo--timer nil))
     (if (and (>= corfu--index 0) (corfu-popupinfo--visible-p corfu--frame))
-        (let ((cand (nth corfu--index corfu--candidates)))
+        (let* ((cand (nth corfu--index corfu--candidates))
+               (cand-changed (not (equal-including-properties
+                                   cand corfu-popupinfo--candidate))))
           (if-let* ((delay (if (consp corfu-popupinfo-delay)
                                (funcall (if (eq corfu-popupinfo--toggle 'init) #'car #'cdr)
                                         corfu-popupinfo-delay)
@@ -510,13 +511,14 @@ not be displayed until this command is called again, even if
               (progn
                 (when (and (corfu-popupinfo--visible-p) (> delay 0))
                   (cond
-                   (corfu-popupinfo-hide
+                   ((and corfu-popupinfo-hide cand-changed)
                     (corfu-popupinfo--hide))
                    (corfu-popupinfo--candidate
                     (corfu-popupinfo--show corfu-popupinfo--candidate))))
-                (setq corfu-popupinfo--timer
-                      (run-at-time delay nil #'corfu-popupinfo--show cand)))
-            (unless (equal-including-properties cand corfu-popupinfo--candidate)
+                (when cand-changed
+                  (setq corfu-popupinfo--timer
+                        (run-at-time delay nil #'corfu-popupinfo--show cand))))
+            (unless cand-changed
               (corfu-popupinfo--hide))))
       (corfu-popupinfo--hide))))
 

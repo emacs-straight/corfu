@@ -2,6 +2,11 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Development
+
+- More reliable child frame resizing and positioning.
+- Fix EXWM =delete-frame= problem.
+
 * Version 2.10 (2026-05-19)
 
 - Improve deduplication of candidates.

@@ -479,6 +479,7 @@ FRAME is the existing frame."
     ;; lovely surprises.
     (let* ((win (frame-root-window frame))
            (is (frame-parameters frame))
+           (params `((corfu--geometry ,x ,y ,width ,height) ,@params))
            (diff (cl-loop for p in params for (k . v) = p
                           unless (equal (alist-get k is) v) collect p)))
       (when diff (modify-frame-parameters frame diff))
@@ -489,31 +490,30 @@ FRAME is the existing frame."
       (set-window-parameter win 'no-delete-other-windows t)
       (set-window-parameter win 'no-other-window t)
       ;; Mark window as dedicated to prevent frame reuse (gh:minad/corfu#60)
-      (set-window-dedicated-p win t))
-    (redirect-frame-focus frame parent)
-    (pcase-let* ((`(,ox ,oy ,right ,bottom) (frame-edges frame 'outer-edges))
-                 (border (* 2 corfu-border-width))
-                 (ow (- (- right ox) left-fringe-width right-fringe-width border))
-                 (oh (- (- bottom oy) border))
-                 (pos-change (or (/= x ox) (/= y oy)))
-                 (size-change (or (/= ow width) (/= oh height))))
-      (cond
-       ((and pos-change size-change)
-        ;; TODO: New Emacs 31 function for faster resizing/movement in one go.
-        ;; Add this function to Compat 31 as backport.
-        (static-if (fboundp 'set-frame-size-and-position-pixelwise)
-            (set-frame-size-and-position-pixelwise frame width height x y)
-          (set-frame-size frame width height t)
-          (set-frame-position frame x y)))
-       (pos-change (set-frame-position frame x y))
-       (size-change (set-frame-size frame width height t)))))
+      (set-window-dedicated-p win t)
+      (redirect-frame-focus frame parent)
+      (pcase-let* ((`(,ox ,oy ,ow ,oh) (alist-get 'corfu--geometry is '(0 0 0 0)))
+                   (pos-change (or (/= x ox) (/= y oy)))
+                   (size-change (or (/= ow width) (/= oh height))))
+        (cond
+         ((and pos-change size-change)
+          ;; TODO: New Emacs 31 function for faster resizing/movement in one go.
+          ;; Add this function to Compat 31 as backport.
+          (static-if (fboundp 'set-frame-size-and-position-pixelwise)
+              (set-frame-size-and-position-pixelwise frame width height x y)
+            (set-frame-size frame width height t)
+            (set-frame-position frame x y)))
+         (pos-change (set-frame-position frame x y))
+         (size-change (set-frame-size frame width height t))))))
   (make-frame-visible frame)
   ;; Unparent child frame if EXWM is used, otherwise EXWM buffers are drawn on
   ;; top of the Corfu child frame.
-  (when (and (bound-and-true-p exwm--connection)
-             (display-graphic-p frame) (frame-parent frame))
+  (when-let* (((bound-and-true-p exwm--connection))
+              ((display-graphic-p frame))
+              (parent (frame-parent frame)))
     (redisplay t)
-    (set-frame-parameter frame 'parent-frame nil))
+    (modify-frame-parameters frame `((delete-before . ,parent)
+                                     (parent-frame . nil))))
   frame)
 
 (defun corfu--hide-frame-deferred (frame)
