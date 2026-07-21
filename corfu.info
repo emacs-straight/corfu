@@ -179,6 +179,7 @@ enabling the local ‘corfu-mode’ or the ‘global-corfu-mode’.
 
        ;; Enable optional extension modes:
        ;; (corfu-history-mode)
+       ;; (corfu-mouse-mode)
        ;; (corfu-popupinfo-mode)
        )
 
@@ -624,6 +625,9 @@ the Corfu package:
    • corfu-info
      (https://github.com/minad/corfu/blob/main/extensions/corfu-info.el):
      Actions to access the candidate location and documentation.
+   • corfu-mouse
+     (https://github.com/minad/corfu/blob/main/extensions/corfu-mouse.el):
+     ‘corfu-mouse-mode’ enables mouse support.
    • corfu-popupinfo
      (https://github.com/minad/corfu/blob/main/extensions/corfu-popupinfo.el):
      Display candidate documentation or source in a popup next to the
@@ -742,18 +746,18 @@ Node: Features2138
 Node: Installation3584
 Node: Key bindings4117
 Node: Configuration5452
-Node: Auto completion11468
-Node: Buffer-local/Corfu-only completion styles13597
-Node: Completing in the minibuffer15996
-Node: Completing in the Eshell or Shell17545
-Node: Orderless completion19342
-Node: TAB-only completion22415
-Node: TAB-and-Go completion23784
-Node: Transfer completion to the minibuffer24874
-Node: Extensions26295
-Node: Complementary packages28231
-Node: Alternatives30539
-Node: Debugging Corfu32332
+Node: Auto completion11497
+Node: Buffer-local/Corfu-only completion styles13626
+Node: Completing in the minibuffer16025
+Node: Completing in the Eshell or Shell17574
+Node: Orderless completion19371
+Node: TAB-only completion22444
+Node: TAB-and-Go completion23813
+Node: Transfer completion to the minibuffer24903
+Node: Extensions26324
+Node: Complementary packages28405
+Node: Alternatives30713
+Node: Debugging Corfu32506
 
 End Tag Table
 

@@ -93,7 +93,7 @@ The shift will decay away after `corfu-history-duplicate' times
 
 ;;;###autoload
 (define-minor-mode corfu-history-mode
-  "Update Corfu history and sort completions by history."
+  "Save completion history and sort candidates by history."
   :global t :group 'corfu
   (if corfu-history-mode
       (add-function :override corfu-sort-function #'corfu-history--sort)

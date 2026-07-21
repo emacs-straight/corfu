@@ -8,6 +8,7 @@
 
   • More reliable child frame resizing and positioning.
   • Fix EXWM `delete-frame' problem.
+  • New `corfu-mouse' extension.
 
 
 2 Version 2.10 (2026-05-19)
