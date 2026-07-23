@@ -2,7 +2,7 @@
 #+author: Daniel Mendler
 #+language: en
 
-* Development
+* Version 2.11 (2026-07-22)
 
 - More reliable child frame resizing and positioning.
 - Fix EXWM =delete-frame= problem.
