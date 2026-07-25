@@ -355,6 +355,10 @@ It is recommended to avoid changing these parameters.")
 
 (defvar corfu--mouse-ignore-map
   (let ((map (define-keymap
+               "<wheel-up>" #'ignore
+               "<wheel-down>" #'ignore
+               "<wheel-left>" #'ignore
+               "<wheel-right>" #'ignore
                "<touchscreen-begin>" #'ignore
                "<right-fringe> <t>" #'ignore
                "<left-fringe> <t>" #'ignore)))
