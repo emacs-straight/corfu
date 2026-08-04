@@ -496,26 +496,25 @@ not be displayed until this command is called again, even if
       (cancel-timer corfu-popupinfo--timer)
       (setq corfu-popupinfo--timer nil))
     (if (and (>= corfu--index 0) (corfu-popupinfo--visible-p corfu--frame))
-        (let* ((cand (nth corfu--index corfu--candidates))
-               (cand-changed (not (equal-including-properties
-                                   cand corfu-popupinfo--candidate))))
-          (if-let* ((delay (if (consp corfu-popupinfo-delay)
-                               (funcall (if (eq corfu-popupinfo--toggle 'init) #'car #'cdr)
-                                        corfu-popupinfo-delay)
-                             corfu-popupinfo-delay))
-                    (corfu-popupinfo--toggle))
-              (progn
-                (when (and (corfu-popupinfo--visible-p) (> delay 0))
-                  (cond
-                   ((and corfu-popupinfo-hide cand-changed)
-                    (corfu-popupinfo--hide))
-                   (corfu-popupinfo--candidate
-                    (corfu-popupinfo--show corfu-popupinfo--candidate))))
-                (when cand-changed
-                  (setq corfu-popupinfo--timer
-                        (run-at-time delay nil #'corfu-popupinfo--show cand))))
-            (unless cand-changed
-              (corfu-popupinfo--hide))))
+        (let* ((old-cand corfu-popupinfo--candidate)
+               (new-cand (nth corfu--index corfu--candidates))
+               (cand-changed (not (equal-including-properties new-cand old-cand)))
+               (delay (if (consp corfu-popupinfo-delay)
+                          (funcall (if (eq corfu-popupinfo--toggle 'init) #'car #'cdr)
+                                   corfu-popupinfo-delay)
+                        corfu-popupinfo-delay)))
+          (cond
+           ((and delay corfu-popupinfo--toggle)
+            (when (and (corfu-popupinfo--visible-p) (> delay 0))
+              (cond
+               ((and corfu-popupinfo-hide cand-changed)
+                (corfu-popupinfo--hide))
+               (old-cand
+                (corfu-popupinfo--show old-cand))))
+            (setq corfu-popupinfo--timer
+                  (run-at-time delay nil #'corfu-popupinfo--show new-cand)))
+           (cand-changed
+            (corfu-popupinfo--hide))))
       (corfu-popupinfo--hide))))
 
 (cl-defmethod corfu--teardown :before (_buf &context (corfu-popupinfo-mode (eql t)))
