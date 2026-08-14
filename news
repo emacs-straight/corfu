@@ -3,8 +3,8 @@
                            ━━━━━━━━━━━━━━━━━
 
 
-1 Development
-═════════════
+1 Version 2.13 (2026-08-13)
+═══════════════════════════
 
   • `corfu-popupinfo': Bugfix when `corfu-popupinfo-delay' is set to
     nil.
