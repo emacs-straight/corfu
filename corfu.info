@@ -603,7 +603,7 @@ subdirectory extensions/
 (https://github.com/minad/corfu/tree/main/extensions).  The extensions
 are installed together with Corfu.  The extensions are inactive by
 default and can be enabled manually if desired.  Furthermore it is
-possible to install all of the files separately, both ‘corfu.el’ and the
+possible to install each of the files individually, ‘corfu.el’ and the
 ‘corfu-*.el’ extensions.  Currently the following extensions come with
 the Corfu package:
 
@@ -755,9 +755,9 @@ Node: TAB-only completion22444
 Node: TAB-and-Go completion23813
 Node: Transfer completion to the minibuffer24903
 Node: Extensions26324
-Node: Complementary packages28405
-Node: Alternatives30713
-Node: Debugging Corfu32506
+Node: Complementary packages28403
+Node: Alternatives30711
+Node: Debugging Corfu32504
 
 End Tag Table
 
