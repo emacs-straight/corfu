@@ -3,8 +3,8 @@
                            ━━━━━━━━━━━━━━━━━
 
 
-1 Development
-═════════════
+1 Version 2.15 (2026-09-03)
+═══════════════════════════
 
   • Minor optimizations during candidate computation.
   • Do not remove a file from the candidate list if it matches the input
